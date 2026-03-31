@@ -1,0 +1,60 @@
+{
+  "name": "solidity-doc-generator",
+  "version": "2.0.0",
+  "description": "Modular, markdown-based documentation generator for Solidity contracts. Output clean markdown with YAML frontmatter, compatible with any static site generator.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "solidity-docgen": "./bin/solidity-docgen"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config/schema.js",
+      "types": "./dist/config/schema.d.ts"
+    },
+    "./templates": {
+      "import": "./dist/templates/handlebars.js",
+      "types": "./dist/templates/handlebars.d.ts"
+    },
+    "./plugins": {
+      "import": "./dist/plugins/index.js",
+      "types": "./dist/plugins/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docgen": "ts-node src/cli/index.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "solidity",
+    "documentation",
+    "generator",
+    "markdown",
+    "ast",
+    "contracts",
+    "ethereum",
+    "hardhat"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "handlebars": "^4.7.9"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2",
+    "ts-node": "^10.9.2"
+  }
+}
