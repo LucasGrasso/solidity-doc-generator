@@ -1,0 +1,10 @@
+{
+  "name": "test-contracts",
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "hardhat": "^3.3.0",
+    "typescript": "~5.8.0"
+  }
+}
