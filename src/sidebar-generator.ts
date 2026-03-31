@@ -118,17 +118,22 @@ function getRelativePath(basePath: string, filename: string): string {
 /**
  * Generate VitePress config template with sidebar
  */
+/**
+ * Generate VitePress config template with sidebar
+ */
 export function generateVitepressConfig(
   title: string,
   description: string,
   repository?: string,
   sidebar: SidebarItem[] = [],
+  basePath: string = "/",
 ): string {
   const sidebarCode = formatSidebarCode(sidebar, 6);
 
   return `import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  base: '${basePath}',
   title: "${title.replace(/"/g, '\\"')}",
   description: "${description.replace(/"/g, '\\"')}",
   ignoreDeadLinks: true,

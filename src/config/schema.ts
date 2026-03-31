@@ -85,6 +85,12 @@ export type DocgenConfig = {
    * Repository URL for VitePress config
    */
   repository?: string;
+
+  /**
+   * Base path for VitePress deployment (e.g., "/repo-name/" for GitHub Pages)
+   * @default "/"
+   */
+  vitepressBasePath?: string;
 };
 
 /**

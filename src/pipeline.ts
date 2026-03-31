@@ -89,6 +89,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
         config.siteDescription || "API reference",
         config.repository,
         sidebar,
+        config.vitepressBasePath || "/",
       );
 
       const configDir = join(config.outDir, ".vitepress");
