@@ -1,15 +1,19 @@
 > [!CAUTION]
 > This project was (mostly) AI-generated. It should be considered a **proof of concept** or **starting point** for development. Contributions to implement missing features, fix bugs, and improve documentation are welcome!
 
+<a href="https://www.npmjs.com/package/solidity-doc-generator" target="_blank"><img alt="NPM Version" src="https://img.shields.io/npm/v/solidity-doc-generator">
+</a>
+<a href="https://github.com/LucasGrasso/solidity-doc-generator/blob/main/LICENSE" target="_blank"><img alt="GitHub License" src="https://img.shields.io/github/license/LucasGrasso/solidity-doc-generator"></a>
+
 # Solidity Doc Generator
 
-A **modular, markdown-based documentation generator** for Solidity contracts. Output clean markdown files with YAML frontmatter compatible with any static site generator (Next.js, VitePress, MkDocs, etc.).
+A **modular, markdown-based documentation generator** for Solidity contracts. Output clean markdown files with YAML frontmatter compatible with any static site generator.
 
-It has a built-in integration for VitePress.
+Built-in integration for **VitePress** with automatic sidebar generation.
 
 ## Features
 
-✨ **Markdown + YAML Frontmatter** — Decouples content from styling. Works with VitePress, Next.js, MkDocs, Jekyll, or any static site generator.
+✨ **Markdown + YAML Frontmatter** — Output clean markdown files compatible with any static site generator.
 
 🔌 **Plugin System** — Extend functionality with hook points (`onItem`, `onFilter`, `onWrite`, `onFinish`).
 
@@ -17,110 +21,53 @@ It has a built-in integration for VitePress.
 
 📝 **Custom Properties** — Extract `@custom:*` tags from docstrings and inject into rendered output.
 
-⚙️ **Configuration File** — Simple `.ts`/`.js`/`.json` config (not embedded in `hardhat.config.ts`).
+⚙️ **Configuration File** — Simple `.ts`/`.js`/`.json` config file.
 
-🔍 **Filtering & Grouping** — Exclude contracts, filter by kind, group by folder/category.
+🔍 **Source-based Grouping** — Multiple contracts from the same source file grouped into one markdown file (OpenZeppelin style).
 
-📤 **Metadata Export** — Generate JSON and TypeScript definitions for programmatic access.
-
-## Architecture: 5 Phases
-
-### Phase 1: Core Pipeline ✅
-
-- `src/core/parser.ts` — Extract Solidity AST into structured metadata
-- `src/core/filter.ts` — Filter, sort, and group contracts
-- `src/core/renderer.ts` — Abstract renderer interface + markdown implementation
-- `src/config/schema.ts` — Configuration types and loader
-
-### Phase 2: Customization 🚀
-
-- `src/templates/handlebars.ts` — Handlebars template engine
-- `src/properties/index.ts` — Custom property injection system
-- `src/plugins/index.ts` — Plugin system with hook points
-
-### Phase 3: CLI (Not yet implemented)
-
-- `src/cli/index.ts` — Command-line interface
-- `src/hardhat-task.ts` — Optional Hardhat v3 plugin
-
-### Phase 4: Site Integration (Not yet implemented)
-
-- Frontmatter generators for VitePress, Next.js, MkDocs
-- Navigation index generation
-
-### Phase 5: Exporters (Not yet implemented)
-
-- `src/exporters/json.ts` — JSON metadata export
-- `src/exporters/types.ts` — TypeScript type generation
+🚀 **VitePress Integration** — Automatic sidebar generation and `.vitepress/config.ts` scaffolding.
 
 ## Quick Start
 
-### Step 1: Install Dependencies
+### Step 1: Install
 
 ```bash
-npm install
-npm install --save-dev ts-node
+npm install --save-dev solidity-doc-generator
 ```
 
-### Step 2: Create Configuration
+### Step 2: Create Hardhat Project
 
-Create `docgen.config.ts`:
+Set up a Hardhat project with Solidity contracts:
+
+```bash
+npx hardhat init
+# Place contracts in contracts/
+```
+
+### Step 3: Create Configuration
+
+Create `docgen.config.ts` in your project root:
 
 ```typescript
-import type { DocgenConfig } from "./src/config/schema";
+import type { DocgenConfig } from "solidity-doc-generator";
 
 export default {
-  rootDir: process.cwd(),
-  buildInfoDir: "artifacts/build-info",
   outDir: "docs",
-  templateDir: "templates",
-  exclude: ["**/Mock*.sol", "**/test/**"],
-  contractKinds: ["contract", "interface", "library"],
-  frontmatter: {
-    author: "My Project",
-    license: "MIT",
-  },
+  sourceDir: "contracts", // Which directory to document
 } satisfies DocgenConfig;
 ```
 
-### Step 3: Run Pipeline
+### Step 4: Compile and Generate
 
 ```bash
-npx ts-node src/cli/index.ts --config docgen.config.ts
+# Compile contracts (generates artifacts)
+npx hardhat compile
+
+# Generate documentation
+npx solidity-docgen
 ```
 
-Generated markdown files will appear in `docs/`.
-
-## Project Structure
-
-```
-solidity-doc-generator/
-├── src/
-│   ├── core/
-│   │   ├── types.ts          # Shared types
-│   │   ├── parser.ts         # AST extraction
-│   │   ├── filter.ts         # Filtering & grouping
-│   │   ├── renderer.ts       # Markdown renderer
-│   │   └── index.ts          # Core exports
-│   ├── config/
-│   │   └── schema.ts         # Config types & loader
-│   ├── templates/
-│   │   └── handlebars.ts     # Template engine
-│   ├── properties/
-│   │   └── index.ts          # Property injection
-│   ├── plugins/
-│   │   └── index.ts          # Plugin system
-│   ├── renderers/            # (Future: additional renderers)
-│   ├── exporters/            # (Future: JSON, TypeScript exports)
-│   ├── cli/                  # (Future: CLI entry point)
-│   ├── utils/                # (Future: utility functions)
-│   ├── pipeline.ts           # Main orchestration
-│   └── index.ts              # Main exports
-├── tsconfig.json
-├── package.json
-├── docgen.config.example.ts
-└── README.md
-```
+Markdown files will be generated in `docs/`.
 
 ## Usage Examples
 
@@ -143,202 +90,325 @@ npx solidity-docgen --output-dir ./generated-docs
 npx solidity-docgen --config myconfig.ts --artifacts-dir ./build --output-dir ./docs
 ```
 
-### With Custom Templates
+### Custom Templates
+
+Override the default Handlebars template:
 
 ```typescript
 // docgen.config.ts
 export default {
-  outDir: "./docs",
-  templateDir: "./my-templates", // Override default .hbs files
+  outDir: "docs",
+  templateDir: "./my-templates",
 };
 ```
 
-Place custom templates in `my-templates/contract.hbs`, etc.
+Create `my-templates/contract.hbs`:
 
-### With Custom Properties
+```handlebars
+#
+{{contractName}}
+
+{{description}}
+
+## Functions
+
+{{#each functions}}
+  ###
+  {{name}}
+
+  {{description}}
+
+{{/each}}
+```
+
+Available template variables: `contractName`, `description`, `sourceFile`, `functions`, `events`, `errors`, etc.
+
+### Custom Properties
+
+Extract custom docstring tags (e.g., `@custom:category`) and inject into frontmatter:
 
 ```typescript
+// docgen.config.ts
 export default {
   customProperties: {
     category: (doc) => {
-      if (doc.contractName.includes("ERC")) return "standards";
-      return "utilities";
+      // Extract @custom:category from docstring
+      const match = doc.docstring?.match(/@custom:category\s+(\w+)/);
+      return match?.[1] || "general";
     },
-    gasEstimate: (doc) => {
-      // Extract from docstring or compute
-      return undefined;
+    version: (doc) => {
+      return doc.docstring?.match(/@custom:version\s+([\d.]+)/)?.[1];
     },
   },
 };
 ```
 
-### With Plugins
+Then in your Solidity comments:
 
-```typescript
-export default {
-  plugins: [
-    {
-      onFilter: async (items, context) => {
-        // Sort by contract name
-        return items.sort((a, b) =>
-          a.doc.contractName.localeCompare(b.doc.contractName),
-        );
-      },
-      onWrite: async (files, context) => {
-        // Add custom metadata
-        return files.map((f) => ({
-          ...f,
-          content: "<!-- Auto-generated -->\n" + f.content,
-        }));
-      },
-    },
-  ],
-};
+```solidity
+/**
+ * @custom:category tokens
+ * @custom:version 2.0
+ */
+contract MyToken { ... }
 ```
 
-### Integrate with VitePress
+Custom properties are automatically added to generated YAML frontmatter.
 
-1. Generate docs: `npx solidity-docgen --config docgen.config.ts`
-2. Copy `docs/*.md` to your VitePress `docs/` folder
-3. VitePress automatically reads YAML frontmatter
-4. Configure sidebar in `.vitepress/config.ts`
+### Plugins
+
+Create custom plugins to extend functionality:
 
 ```typescript
-import { createSidebar } from "path/to/generated/sidebar.js";
+// plugins/my-plugin.ts
+import type { Plugin } from "solidity-doc-generator";
 
 export default {
-  themeConfig: {
-    sidebar: createSidebar(),
-  },
-};
-```
-
-## Configuration Options
-
-```typescript
-type DocgenConfig = {
-  // Paths
-  rootDir?: string; // Project root (default: cwd)
-  buildInfoDir?: string; // Artifact location (default: artifacts/build-info)
-  outDir?: string; // Output location (default: docs)
-  templateDir?: string; // Template overrides (default: templates)
-
-  // Filtering
-  exclude?: string[]; // Glob patterns to exclude
-  contractKinds?: string[]; // Contract types to include
-
-  // Customization
-  customProperties?: Record<string, Function>; // Extract custom fields
-  plugins?: Plugin[]; // Plugin modules
-  frontmatter?: Record<string, any>; // Default frontmatter fields
-
-  // Target site generator
-  target?: "generic" | "vitepress" | "nextra" | "mkdocs" | "jekyll";
-};
-```
-
-## CLI Parameter Overrides
-
-Configuration file values can be overridden via command-line parameters:
-
-```bash
-# Override artifacts directory (default: artifacts/build-info)
-npx solidity-docgen --artifacts-dir ./build/output
-
-# Override output directory (default: docs)
-npx solidity-docgen --output-dir ./documentation
-
-# Override root directory (default: current working directory)
-npx solidity-docgen --root-dir ./projects/my-contract
-
-# Combine multiple parameters
-npx solidity-docgen --config prod.config.ts \
-  --artifacts-dir ./build \
-  --output-dir ./generated-docs \
-  --root-dir ./
-```
-
-This allows for flexible workflows where the same config file works across different environments or folder structures.
-
-## Frontmatter Format
-
-Generated markdown files include YAML frontmatter:
-
-```markdown
----
-title: MyContract
-description: Main entry point for the protocol
-sourceFile: src/MyContract.sol
-contractKind: contract
-slug: mycontract
-category: core
----
-
-# MyContract
-
-...
-```
-
-This works with all major static site generators out-of-the-box.
-
-## Plugin Development
-
-Create a plugin by implementing the `Plugin` interface:
-
-```typescript
-import type { Plugin, PluginContext } from "solidity-doc-generator";
-
-const myPlugin: Plugin = {
   name: "my-plugin",
-  version: "1.0.0",
   hooks: {
-    onItem: async (item, context) => {
-      // Process each contract
-      return { ...item, category: "my-category" };
+    onItem: async (item) => {
+      // Process individual contracts
+      return item;
     },
-    onFilter: async (items, context) => {
-      // Process filtered list
-      return items.sort(...);
+    onFilter: async (items) => {
+      // Modify filtered list
+      return items.sort((a, b) =>
+        a.doc.contractName.localeCompare(b.doc.contractName),
+      );
     },
-    onWrite: async (files, context) => {
-      // Post-process rendered files
-      return files.map(...);
+    onWrite: async (files) => {
+      // Post-process rendered markdown
+      return files.map((f) => ({
+        ...f,
+        content: "<!-- Generated -->\n" + f.content,
+      }));
     },
-    onFinish: async (files, context) => {
-      // Side effects after writing
+    onFinish: async (files) => {
+      // Side effects after generation
       console.log(`Generated ${files.length} files`);
     },
   },
-};
-
-export default myPlugin;
+} satisfies Plugin;
 ```
 
 Register in config:
 
 ```typescript
-import myPlugin from "./plugins/my-plugin.ts";
+import myPlugin from "./plugins/my-plugin";
 
 export default {
   plugins: [myPlugin],
 };
 ```
 
-## Development Status
+### Integrate with VitePress
 
-| Phase                     | Status         | Features                              |
-| ------------------------- | -------------- | ------------------------------------- |
-| Phase 1: Core             | ✅ Complete    | Parser, filter, markdown renderer     |
-| Phase 2: Customization    | 🚀 In Progress | Templates, properties, plugins        |
-| Phase 3: CLI              | 📋 Planned     | CLI tool, Hardhat plugin              |
-| Phase 4: Site Integration | 📋 Planned     | Frontmatter presets, index generation |
-| Phase 5: Exporters        | 📋 Planned     | JSON, TypeScript exports              |
+Our tool can automatically generate a complete VitePress site:
+
+```bash
+# Install VitePress locally
+npm install -D vitepress vue
+
+# Generate docs with VitePress config
+npx solidity-docgen --generate-vitepress-sidebar \
+  --site-title "My Contract Docs" \
+  --site-description "Documentation for my smart contracts"
+
+# Start dev server
+npm run docs:dev
+```
+
+Or in `docgen.config.ts`:
+
+```typescript
+export default {
+  outDir: "docs/api",
+  generateVitepressSidebar: true,
+  siteTitle: "My Contract Docs",
+  siteDescription: "Documentation for my smart contracts",
+};
+```
+
+This generates:
+
+- Markdown files in `docs/api/`
+- `.vitepress/config.ts` with auto-generated sidebar
+- Ready-to-run VitePress site
+
+## Configuration Options
+
+```typescript
+type DocgenConfig = {
+  // Paths (relative to project root)
+  buildInfoDir?: string; // Hardhat artifacts (default: artifacts/build-info)
+  outDir?: string; // Output docs folder (default: docs)
+  sourceDir?: string; // Contracts to document (default: contracts)
+  templateDir?: string; // Custom template overrides
+
+  // Filtering & Customization
+  exclude?: string[]; // Glob patterns to exclude
+  contractKinds?: string[]; // Include only these kinds (contract, interface, library)
+  customProperties?: Record<string, Function>; // Custom docstring properties
+  plugins?: Plugin[]; // Plugin modules
+  frontmatter?: Record<string, any>; // Default YAML frontmatter
+
+  // VitePress Integration
+  generateVitepressSidebar?: boolean; // Generate .vitepress/config.ts
+  siteTitle?: string; // VitePress site title
+  siteDescription?: string; // VitePress site description
+};
+```
+
+## CLI Parameter Overrides
+
+Override config file values directly from the command line:
+
+```bash
+# Specify which contracts directory to document
+npx solidity-docgen --source-dir ./src
+
+# Override artifacts directory
+npx solidity-docgen --artifacts-dir ./build/build-info
+
+# Override output directory
+npx solidity-docgen --output-dir ./generated-docs
+
+# Generate VitePress config
+npx solidity-docgen --generate-vitepress-sidebar
+
+# Combine multiple overrides
+npx solidity-docgen \
+  --source-dir ./contracts \
+  --artifacts-dir ./build \
+  --output-dir ./docs \
+  --generate-vitepress-sidebar
+```
+
+All CLI parameters override corresponding config file settings.
+
+## Frontmatter Format
+
+Generated markdown files include YAML frontmatter for static site generators:
+
+```markdown
+---
+title: MyToken
+description: ERC20 token implementation
+sourceFile: src/tokens/MyToken.sol
+contractKind: contract
+---
+
+# MyToken
+
+Contract implementation details...
+```
+
+Default fields:
+
+- `title` — Contract name
+- `description` — From contract docstring
+- `sourceFile` — Source file path
+- `contractKind` — contract | interface | library
+
+Add custom fields via `customProperties` or `frontmatter` config.
+
+## Plugin Hook Reference
+
+Available hooks for extending functionality:
+
+```typescript
+type Plugin = {
+  name: string;
+  version?: string;
+  hooks?: {
+    // Process individual contract documents
+    onItem?: (
+      item: DocumentItem,
+      context: PluginContext,
+    ) => Promise<DocumentItem>;
+
+    // Process filtered list of contracts
+    onFilter?: (
+      items: DocumentItem[],
+      context: PluginContext,
+    ) => Promise<DocumentItem[]>;
+
+    // Post-process rendered markdown files
+    onWrite?: (
+      files: RenderedFile[],
+      context: PluginContext,
+    ) => Promise<RenderedFile[]>;
+
+    // Execute after all files written (side effects, cleanup, etc.)
+    onFinish?: (files: RenderedFile[], context: PluginContext) => Promise<void>;
+  };
+};
+```
+
+Hook input/output:
+
+- `onItem` — Transform single contract document
+- `onFilter` — Sort, deduplicate, or modify contract list
+- `onWrite` — Modify markdown content, add comments, etc.
+- `onFinish` — Call external APIs, log statistics, etc.
+
+## Troubleshooting
+
+**Q: Getting "ENOENT: no such file or directory" for artifacts**
+
+A: Make sure you've compiled your Hardhat project:
+
+```bash
+npx hardhat compile
+```
+
+The tool reads from artifacts generated by Hardhat. Default path is `artifacts/build-info/`.
+
+**Q: No markdown files generated**
+
+A: Check that:
+
+1. Contracts exist in the directory specified by `sourceDir` (default: `contracts/`)
+2. Hardhat compilation succeeded
+3. Contracts aren't filtered out by `exclude` glob patterns
+4. Contract docstrings are valid
+
+**Q: VitePress sidebar not generating**
+
+A: Use the CLI flag:
+
+```bash
+npx solidity-docgen --generate-vitepress-sidebar
+```
+
+Or in config:
+
+```typescript
+export default {
+  generateVitepressSidebar: true,
+};
+```
+
+**Q: Custom properties not appearing in frontmatter**
+
+A: Ensure custom property functions return non-undefined values:
+
+```typescript
+customProperties: {
+  myField: (doc) => {
+    // Must return a value, not undefined
+    return "default";
+  },
+}
+```
 
 ## Testing
 
 ```bash
 npm test
 ```
+
+Tests verify artifact parsing, contract filtering, markdown rendering, and VitePress config generation.
 
 ## Contributing
 
