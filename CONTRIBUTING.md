@@ -5,6 +5,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or pnpm
 - Git
@@ -12,17 +13,20 @@ Thank you for your interest in contributing! This document provides guidelines a
 ### Setting Up Development Environment
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-org/solidity-doc-generator.git
    cd solidity-doc-generator
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Build the project**
+
    ```bash
    npm run build
    ```
@@ -58,6 +62,7 @@ solidity-doc-generator/
 ### Making Changes
 
 1. Create a feature branch
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -65,6 +70,7 @@ solidity-doc-generator/
 2. Make your changes in the `src/` directory
 
 3. Build and test
+
    ```bash
    npm run build
    # Test with test-contracts if needed
@@ -116,12 +122,14 @@ npx hardhat docgen  # Using Hardhat plugin
 ### Documentation
 
 Documentation lives in:
+
 - **API Docs**: Generated from code via VitePress in `/docs`
 - **README.md**: Quick start and overview
 - **CONTRIBUTING.md**: This file
 - **Code Comments**: JSDoc for complex functions
 
 To preview documentation:
+
 ```bash
 npm run docs:dev
 # Then open http://localhost:5173/
@@ -135,6 +143,7 @@ npm run docs:dev
    - `docs/add-contributing-guide`
 
 2. **Write clear commit messages**
+
    ```bash
    git commit -m "feat: add new feature description"
    git commit -m "fix: resolve issue with parsing"
@@ -142,6 +151,7 @@ npm run docs:dev
    ```
 
 3. **Push to your fork**
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -165,18 +175,22 @@ When reporting bugs:
 - **Mention your environment** (Node version, OS, etc)
 
 Example issue:
+
 ```markdown
 ## Issue: Parser fails on contract with custom errors
 
 ### Steps to Reproduce
+
 1. Create a Solidity file with a custom error definition
 2. Run `solidity-docgen` on it
 3. See the following error: ...
 
 ### Expected Behavior
+
 The parser should handle custom errors gracefully
 
 ### Environment
+
 - Node 18.17.0
 - solidity-doc-generator v1.0.0
 ```

@@ -28,6 +28,10 @@
     "./plugins": {
       "import": "./dist/plugins/index.js",
       "types": "./dist/plugins/index.d.ts"
+    },
+    "./hardhat": {
+      "import": "./dist/hardhat/index.js",
+      "types": "./dist/hardhat/index.d.ts"
     }
   },
   "scripts": {
@@ -50,8 +54,16 @@
     "ethereum",
     "hardhat"
   ],
-  "author": "",
+  "author": "Lucas Grasso",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/solidity-doc-generator"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/solidity-doc-generator/issues"
+  },
+  "homepage": "https://github.com/your-org/solidity-doc-generator#readme",
   "dependencies": {
     "handlebars": "^4.7.9"
   },
