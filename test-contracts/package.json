@@ -5,6 +5,7 @@
   "devDependencies": {
     "@types/node": "^22.19.15",
     "hardhat": "^3.3.0",
+    "solidity-doc-generator": "file:..",
     "typescript": "~5.8.0"
   }
 }
