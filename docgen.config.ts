@@ -31,7 +31,8 @@ const config = {
 
   // Only include contracts of these kinds
   // Valid values: "contract", "interface", "library", "abstract", "source"
-  contractKinds: ["contract", "interface", "library"],
+  // "source" = files with only structs/enums/free functions (no contracts)
+  contractKinds: ["contract", "interface", "library", "source"],
 
   // Custom properties to extract from docstrings
   // Use @custom:propertyName in your Solidity comments

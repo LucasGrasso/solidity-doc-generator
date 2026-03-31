@@ -19,7 +19,7 @@ export interface SidebarItem {
 function filenameToText(filename: string): string {
   // Remove .md extension
   const withoutExt = filename.replace(/\.md$/, "");
-  
+
   // Handle simple camelCase/PascalCase by keeping it as-is
   return withoutExt.charAt(0).toUpperCase() + withoutExt.slice(1);
 }
@@ -30,7 +30,7 @@ function filenameToText(filename: string): string {
 function extractTitleFromMarkdown(content: string): string | null {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
-  
+
   const frontmatter = match[1];
   const titleMatch = frontmatter.match(/^title:\s*"(.+?)"$/m);
   return titleMatch ? titleMatch[1] : null;
@@ -83,7 +83,7 @@ function buildFolderItem(folderPath: string, folderName: string): SidebarItem {
     } else if (entry.endsWith(".md")) {
       const filename = entry.replace(/\.md$/, "");
       let text = filenameToText(filename);
-      
+
       // Try to extract title from markdown frontmatter
       try {
         const content = readFileSync(fullPath, "utf8");
@@ -94,7 +94,7 @@ function buildFolderItem(folderPath: string, folderName: string): SidebarItem {
       } catch (error) {
         // Fall back to filename-based text
       }
-      
+
       subItems.push({
         text,
         link: `/${getRelativePath(folderPath, entry)}`,
@@ -169,9 +169,9 @@ ${sidebarCode}
  * Format sidebar items as JavaScript code with proper indentation
  */
 function formatSidebarCode(items: SidebarItem[], indent: number = 2): string {
-  const spaces = ' '.repeat(indent);
+  const spaces = " ".repeat(indent);
   const nextIndent = indent + 2;
-  const nextSpaces = ' '.repeat(nextIndent);
+  const nextSpaces = " ".repeat(nextIndent);
 
   return items
     .map((item) => {
@@ -195,5 +195,5 @@ function formatSidebarCode(items: SidebarItem[], indent: number = 2): string {
       code += `${spaces}}`;
       return code;
     })
-    .join(',\n');
+    .join(",\n");
 }
