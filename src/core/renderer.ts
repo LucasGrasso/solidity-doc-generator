@@ -32,7 +32,9 @@ function escapeMarkdown(value: string): string {
     .replaceAll("_", "\\_")
     .replaceAll("{", "\\{")
     .replaceAll("}", "\\}")
-    .replaceAll("#", "\\#");
+    .replaceAll("#", "\\#")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 /**
