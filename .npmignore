@@ -1,0 +1,34 @@
+# Source files - not needed since we publish compiled dist/
+src/
+
+# Development files
+test-contracts/
+docs/
+.github/
+.vitepress/
+
+# Config files
+tsconfig.json
+.prettierrc
+.eslintrc
+
+# Git files
+.git
+.gitignore
+
+# Documentation
+CONTRIBUTING.md
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+*.tsbuildinfo
