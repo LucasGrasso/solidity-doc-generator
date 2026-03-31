@@ -134,6 +134,7 @@ export function normalizeConfig(
     | "siteTitle"
     | "siteDescription"
     | "repository"
+    | "vitepressBasePath"
   > & {
     customProperties: Record<string, (doc: any) => string | undefined>;
     plugins: any[];
@@ -143,6 +144,7 @@ export function normalizeConfig(
     siteTitle: string;
     siteDescription: string;
     repository: string;
+    vitepressBasePath: string;
   }
 > {
   return {
@@ -175,5 +177,6 @@ export function normalizeConfig(
     siteTitle: config.siteTitle ?? "Documentation",
     siteDescription: config.siteDescription ?? "API reference",
     repository: config.repository ?? "https://github.com/your-org/your-repo",
+    vitepressBasePath: config.vitepressBasePath ?? "/",
   };
 }
