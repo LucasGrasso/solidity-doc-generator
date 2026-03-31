@@ -15,7 +15,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-org/solidity-doc-generator.git
+   git clone https://github.com/LucasGrasso/solidity-doc-generator.git
    cd solidity-doc-generator
    ```
 

@@ -58,12 +58,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/solidity-doc-generator"
+    "url": "https://github.com/LucasGrasso/solidity-doc-generator"
   },
   "bugs": {
-    "url": "https://github.com/your-org/solidity-doc-generator/issues"
+    "url": "https://github.com/LucasGrasso/solidity-doc-generator/issues"
   },
-  "homepage": "https://github.com/your-org/solidity-doc-generator#readme",
+  "homepage": "https://github.com/LucasGrasso/solidity-doc-generator#readme",
   "dependencies": {
     "handlebars": "^4.7.9"
   },
