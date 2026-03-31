@@ -12,7 +12,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   let configPath = "docgen.config.ts";
   let watch = false;
-  const overrides: Record<string, string> = {};
+  const overrides: Record<string, any> = {};
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--config" && args[i + 1]) {
@@ -26,6 +26,17 @@ async function main(): Promise<void> {
       i++;
     } else if (args[i] === "--root-dir" && args[i + 1]) {
       overrides.rootDir = args[i + 1];
+      i++;
+    } else if (args[i] === "--generate-vitepress-sidebar") {
+      overrides.generateVitepressSidebar = true;
+    } else if (args[i] === "--site-title" && args[i + 1]) {
+      overrides.siteTitle = args[i + 1];
+      i++;
+    } else if (args[i] === "--site-description" && args[i + 1]) {
+      overrides.siteDescription = args[i + 1];
+      i++;
+    } else if (args[i] === "--repository" && args[i + 1]) {
+      overrides.repository = args[i + 1];
       i++;
     } else if (args[i] === "--watch") {
       watch = true;
@@ -88,13 +99,17 @@ USAGE
   solidity-docgen [OPTIONS]
 
 OPTIONS
-  --config <path>        Path to config file (default: docgen.config.ts)
-  --artifacts-dir <dir>  Build artifacts directory (overrides config)
-  --output-dir <dir>     Output directory (overrides config)
-  --root-dir <dir>       Project root directory (overrides config)
-  --watch                Watch mode (not yet implemented)
-  --help, -h             Show this help message
-  --version, -v          Show version
+  --config <path>              Path to config file (default: docgen.config.ts)
+  --artifacts-dir <dir>        Build artifacts directory (overrides config)
+  --output-dir <dir>           Output directory (overrides config)
+  --root-dir <dir>             Project root directory (overrides config)
+  --generate-vitepress-sidebar Auto-generate VitePress config from docs
+  --site-title <title>         Site title for VitePress config
+  --site-description <desc>    Site description for VitePress config
+  --repository <url>           Repository URL for VitePress config
+  --watch                      Watch mode (not yet implemented)
+  --help, -h                   Show this help message
+  --version, -v                Show version
 
 EXAMPLES
   # With default config file (docgen.config.ts)
@@ -106,14 +121,11 @@ EXAMPLES
   # Override artifacts directory
   $ solidity-docgen --artifacts-dir ./build/build-info
 
-  # Override output directory
-  $ solidity-docgen --output-dir ./generated-docs
+  # Auto-generate VitePress sidebar
+  $ solidity-docgen --generate-vitepress-sidebar --site-title "My API Docs"
 
-  # Combined: config + overrides
-  $ solidity-docgen --config myconfig.ts --artifacts-dir ./build --output-dir ./docs
-
-  # Check version
-  $ solidity-docgen --version
+  # Combined: artifacts + root-dir + auto-sidebar
+  $ solidity-docgen --root-dir ../my-project --artifacts-dir ../my-project/artifacts/build-info --generate-vitepress-sidebar
 
 For more information, visit: https://github.com/solidity-doc-generator
 `);

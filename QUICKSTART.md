@@ -58,6 +58,35 @@ npx solidity-docgen
 
 Generated markdown files appear in `docs/` with YAML frontmatter.
 
+## Using with External Projects
+
+To document contracts from a different project (e.g., in a sister directory):
+
+```bash
+npx solidity-docgen \
+  --root-dir ../other-project \
+  --artifacts-dir ../other-project/artifacts/build-info \
+  --output-dir ../other-project/docs
+```
+
+**Important:** Always specify both `--root-dir` and `--artifacts-dir` when working with external projects, so the parser can locate the source files.
+
+## CLI Parameters
+
+| Parameter         | Purpose                                                   |
+| ----------------- | --------------------------------------------------------- |
+| `--artifacts-dir` | Path to build-info directory (overrides config)           |
+| `--output-dir`    | Where to write markdown files (overrides config)          |
+| `--root-dir`      | Project root for locating source files (overrides config) |
+
+Example with config + CLI override:
+
+```bash
+# config has artifacts in ./artifacts/build-info
+# but override to use ./extended-artifacts instead
+npx solidity-docgen --artifacts-dir ./extended-artifacts
+```
+
 ## Next Steps
 
 ### Integrate with VitePress

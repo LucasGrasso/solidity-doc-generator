@@ -11,6 +11,10 @@ import {
   MarkdownRenderer,
   type FilterOptions,
 } from "./core/index.js";
+import {
+  generateSidebarFromDir,
+  generateVitepressConfig,
+} from "./sidebar-generator.js";
 
 export interface PipelineConfig {
   rootDir: string;
@@ -22,6 +26,10 @@ export interface PipelineConfig {
   plugins?: any[];
   frontmatter?: Record<string, unknown>;
   target?: string;
+  generateVitepressSidebar?: boolean;
+  siteTitle?: string;
+  siteDescription?: string;
+  repository?: string;
 }
 
 export async function runPipeline(config: PipelineConfig): Promise<void> {
@@ -64,6 +72,28 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
     mkdirSync(dir, { recursive: true });
     writeFileSync(filePath, file.content, "utf8");
     console.log(`   ✓ ${filePath}`);
+  }
+
+  // Phase 5: Generate VitePress config (optional)
+  if (config.generateVitepressSidebar) {
+    console.log("📝 Generating VitePress sidebar...");
+    try {
+      const sidebar = generateSidebarFromDir(config.outDir);
+      const vitepressConfig = generateVitepressConfig(
+        config.siteTitle || "Documentation",
+        config.siteDescription || "API reference",
+        config.repository,
+        sidebar,
+      );
+
+      const configDir = join(config.outDir, ".vitepress");
+      mkdirSync(configDir, { recursive: true });
+      const configPath = join(configDir, "config.ts");
+      writeFileSync(configPath, vitepressConfig, "utf8");
+      console.log(`   ✓ ${configPath}`);
+    } catch (error) {
+      console.warn("   ⚠ Could not generate VitePress config:", error);
+    }
   }
 
   console.log("✅ Done!");

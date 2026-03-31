@@ -54,6 +54,67 @@ export function getNoticeFromDocText(
   return lines[0].replace(/^@\w+\s*/, "").trim();
 }
 
+export function extractLicenseFromSource(
+  sourceText: string,
+): string | undefined {
+  const lines = sourceText.split("\n");
+  for (const line of lines) {
+    const match = line.match(/SPDX-License-Identifier:\s*([\w.\-]+)/);
+    if (match) {
+      return match[1];
+    }
+  }
+  return undefined;
+}
+
+export function extractFileNotice(sourceText: string): string {
+  const lines = sourceText.split("\n");
+  const chunks: string[] = [];
+  let inComment = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Stop at first non-comment, non-empty line
+    if (trimmed && !trimmed.startsWith("//")) {
+      if (!inComment) {
+        break;
+      }
+      if (!trimmed.startsWith("*") && !trimmed.startsWith("/*")) {
+        break;
+      }
+    }
+
+    // Handle /// comments (NatSpec)
+    if (trimmed.startsWith("///")) {
+      inComment = true;
+      const content = trimmed.replace(/^\/\/\/\s?/, "").trim();
+      if (content) {
+        chunks.push(content);
+      }
+    }
+    // Handle /** */ block comments
+    else if (trimmed.startsWith("/*") || inComment) {
+      inComment = true;
+      let content = trimmed;
+      if (content.startsWith("/*")) {
+        content = content.replace(/^\/\*+\s?/, "").trim();
+      } else if (content.startsWith("*")) {
+        content = content.replace(/^\*\s?/, "").trim();
+      }
+      if (content.endsWith("*/")) {
+        content = content.replace(/\*\/$/, "").trim();
+        inComment = false;
+      }
+      if (content) {
+        chunks.push(content);
+      }
+    }
+  }
+
+  return chunks.join(" ").trim();
+}
+
 export function parseSrcStart(src: string | undefined): number | null {
   if (!src) {
     return null;
@@ -361,6 +422,7 @@ export function readBuildInfoContracts(
 
       for (const [contractName, data] of Object.entries(contracts)) {
         const astDetails = extractAstContractDetails(sourceAst, contractName);
+        const license = extractLicenseFromSource(sourceText);
         docs.push({
           sourcePath: normalizedSourcePath,
           contractName,
@@ -372,6 +434,7 @@ export function readBuildInfoContracts(
           sourceFreeFunctions: sourceDetails.freeFunctions,
           notice: data.userdoc?.notice ?? "",
           details: data.devdoc?.details ?? "",
+          license,
         });
       }
     }
@@ -403,6 +466,11 @@ export function readBuildInfoContracts(
       continue;
     }
 
+    // Read source file to extract license and file-level docstrings
+    const sourceText = readFileSync(join(rootDir, sourcePath), "utf8");
+    const license = extractLicenseFromSource(sourceText);
+    const fileNotice = extractFileNotice(sourceText);
+
     const sourceTitle = basename(sourcePath, ".sol");
     byKey.set(`${sourcePath}:${sourceTitle}`, {
       sourcePath,
@@ -413,8 +481,9 @@ export function readBuildInfoContracts(
       sourceStructs: sourceDetails.structs,
       sourceEnums: sourceDetails.enums,
       sourceFreeFunctions: sourceDetails.freeFunctions,
-      notice: "",
+      notice: fileNotice,
       details: "",
+      license,
     });
   }
 

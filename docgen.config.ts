@@ -104,11 +104,18 @@ const config = {
   ],
 
   // Default YAML frontmatter fields
-  // Applied to every generated markdown file
+  // These are applied to every generated markdown file.
+  // License from SPDX headers in source files will override the default.
   frontmatter: {
+    // Site-wide metadata
+    description: "API reference for all contracts",
     author: "Your Project",
-    license: "MIT",
     repository: "https://github.com/your-org/your-repo",
+
+    // Default license (can be overridden per-contract via SPDX header)
+    license: "MIT",
+
+    // Site builder specific
     sidebarLabel: "Contracts",
   },
 
@@ -116,6 +123,19 @@ const config = {
   // Affects frontmatter format and organization
   // Options: "generic", "vitepress", "nextra", "mkdocs", "jekyll"
   target: "vitepress",
+
+  // Auto-generate VitePress sidebar configuration
+  // Set to true to automatically generate .vitepress/config.ts
+  generateVitepressSidebar: true,
+
+  // Site title for auto-generated VitePress config
+  siteTitle: "Solidity Scale Codec",
+
+  // Site description for auto-generated VitePress config
+  siteDescription: "API reference for all contracts",
+
+  // Repository URL for VitePress config
+  repository: "https://github.com/your-org/your-repo",
 } satisfies DocgenConfig;
 
 export default config;

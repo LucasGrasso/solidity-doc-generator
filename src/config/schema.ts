@@ -58,6 +58,27 @@ export type DocgenConfig = {
    * @default "generic"
    */
   target?: "generic" | "vitepress" | "nextra" | "mkdocs" | "jekyll";
+
+  /**
+   * Auto-generate VitePress sidebar configuration
+   * @default false
+   */
+  generateVitepressSidebar?: boolean;
+
+  /**
+   * Site title for VitePress config (used if generateVitepressSidebar is true)
+   */
+  siteTitle?: string;
+
+  /**
+   * Site description for VitePress config (used if generateVitepressSidebar is true)
+   */
+  siteDescription?: string;
+
+  /**
+   * Repository URL for VitePress config
+   */
+  repository?: string;
 };
 
 /**
@@ -93,12 +114,23 @@ export function normalizeConfig(
 ): Required<
   Omit<
     DocgenConfig,
-    "customProperties" | "plugins" | "frontmatter" | "target"
+    | "customProperties"
+    | "plugins"
+    | "frontmatter"
+    | "target"
+    | "generateVitepressSidebar"
+    | "siteTitle"
+    | "siteDescription"
+    | "repository"
   > & {
     customProperties: Record<string, (doc: any) => string | undefined>;
     plugins: any[];
     frontmatter: Record<string, unknown>;
     target: string;
+    generateVitepressSidebar: boolean;
+    siteTitle: string;
+    siteDescription: string;
+    repository: string;
   }
 > {
   return {
@@ -126,5 +158,9 @@ export function normalizeConfig(
     plugins: config.plugins ?? [],
     frontmatter: config.frontmatter ?? {},
     target: config.target ?? "generic",
+    generateVitepressSidebar: config.generateVitepressSidebar ?? false,
+    siteTitle: config.siteTitle ?? "Documentation",
+    siteDescription: config.siteDescription ?? "API reference",
+    repository: config.repository ?? "https://github.com/your-org/your-repo",
   };
 }

@@ -110,8 +110,13 @@ export class MarkdownRenderer implements Renderer {
     const doc = item.doc;
     const outputDir = this.options.outputDir ?? "docs";
 
-    // Construct file path
-    const filePath = `${outputDir}/${item.slug}.md`;
+    // Construct file path with folder structure
+    let filePath: string;
+    if (item.folder && item.folder !== "(root)") {
+      filePath = `${outputDir}/${item.folder}/${item.slug}.md`;
+    } else {
+      filePath = `${outputDir}/${item.slug}.md`;
+    }
 
     // Build frontmatter
     const frontmatterData: Record<string, unknown> = {
@@ -125,6 +130,10 @@ export class MarkdownRenderer implements Renderer {
 
     if (item.category) {
       frontmatterData.category = item.category;
+    }
+
+    if (doc.license) {
+      frontmatterData.license = doc.license;
     }
 
     // Build content
@@ -157,38 +166,41 @@ export class MarkdownRenderer implements Renderer {
 
     // ABI Surface
     if (doc.abi.length > 0) {
-      sections.push("## ABI Surface");
-      sections.push("");
-
       const functions = doc.abi.filter((item) => item.type === "function");
       const events = doc.abi.filter((item) => item.type === "event");
       const errors = doc.abi.filter((item) => item.type === "error");
 
-      if (functions.length > 0) {
-        sections.push("### Functions");
+      // Only show section if there's actual content
+      if (functions.length > 0 || events.length > 0 || errors.length > 0) {
+        sections.push("## ABI Surface");
         sections.push("");
-        for (const fn of functions) {
-          sections.push(`- \`${escapeMarkdown(renderAbiSignature(fn))}\``);
-        }
-        sections.push("");
-      }
 
-      if (events.length > 0) {
-        sections.push("### Events");
-        sections.push("");
-        for (const evt of events) {
-          sections.push(`- \`${escapeMarkdown(renderAbiSignature(evt))}\``);
+        if (functions.length > 0) {
+          sections.push("### Functions");
+          sections.push("");
+          for (const fn of functions) {
+            sections.push(`- \`${escapeMarkdown(renderAbiSignature(fn))}\``);
+          }
+          sections.push("");
         }
-        sections.push("");
-      }
 
-      if (errors.length > 0) {
-        sections.push("### Errors");
-        sections.push("");
-        for (const err of errors) {
-          sections.push(`- \`${escapeMarkdown(renderAbiSignature(err))}\``);
+        if (events.length > 0) {
+          sections.push("### Events");
+          sections.push("");
+          for (const evt of events) {
+            sections.push(`- \`${escapeMarkdown(renderAbiSignature(evt))}\``);
+          }
+          sections.push("");
         }
-        sections.push("");
+
+        if (errors.length > 0) {
+          sections.push("### Errors");
+          sections.push("");
+          for (const err of errors) {
+            sections.push(`- \`${escapeMarkdown(renderAbiSignature(err))}\``);
+          }
+          sections.push("");
+        }
       }
     }
 
@@ -197,9 +209,11 @@ export class MarkdownRenderer implements Renderer {
       sections.push("## Function Surface");
       sections.push("");
       for (const fn of doc.astFunctions) {
-        sections.push(`- ${renderCodeBlock(fn.signature, "solidity")}`);
+        // Normalize signature by removing newlines and extra spaces
+        const normalizedSig = fn.signature.replace(/\s+/g, " ").trim();
+        sections.push(`- \`${escapeMarkdown(normalizedSig)}\``);
         if (fn.notice) {
-          sections.push(`  \`${escapeMarkdown(fn.notice)}\``);
+          sections.push(`  - ${fn.notice}`);
         }
       }
       sections.push("");

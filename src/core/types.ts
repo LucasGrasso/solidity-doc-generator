@@ -108,6 +108,7 @@ export type ContractDoc = {
   sourceFreeFunctions: FunctionDoc[];
   notice: string;
   details: string;
+  license?: string;
 };
 
 // =============================================================================

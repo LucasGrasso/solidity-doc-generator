@@ -143,7 +143,8 @@ export function buildFilteredItems(
   const used = new Set<string>();
 
   return filtered.map((doc) => {
-    const base = `${doc.sourcePath.replace(/^src\//, "").replace(/\.sol$/i, "")}-${doc.contractName}`;
+    // Generate slug from just the contract name for shorter filenames
+    const base = doc.contractName;
     let slug = toSlug(base);
     let counter = 2;
 
