@@ -2,8 +2,9 @@
  * Main pipeline: parse → filter → render
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
+import Handlebars from "handlebars";
 
 import {
   readBuildInfoContracts,
@@ -32,6 +33,7 @@ export interface PipelineConfig {
   siteDescription?: string;
   repository?: string;
   vitepressBasePath?: string;
+  indexTemplate?: string | null;
 }
 
 export async function runPipeline(config: PipelineConfig): Promise<void> {
@@ -78,6 +80,35 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
     mkdirSync(dir, { recursive: true });
     writeFileSync(filePath, file.content, "utf8");
     console.log(`   ✓ ${filePath}`);
+  }
+
+  // Phase 4.5: Process custom index template (optional)
+  if (config.indexTemplate) {
+    console.log("📄 Processing custom index template...");
+    try {
+      if (existsSync(config.indexTemplate)) {
+        const templateContent = readFileSync(config.indexTemplate, "utf8");
+        const template = Handlebars.compile(templateContent);
+        
+        // Prepare template variables
+        const templateVars = {
+          title: config.siteTitle || "Documentation",
+          description: config.siteDescription || "API reference",
+          siteTitle: config.siteTitle || "Documentation",
+          siteDescription: config.siteDescription || "API reference",
+          repository: config.repository || "https://github.com/your-org/your-repo",
+        };
+        
+        const renderedIndex = template(templateVars);
+        const indexPath = join(config.outDir, "index.md");
+        writeFileSync(indexPath, renderedIndex, "utf8");
+        console.log(`   ✓ ${indexPath}`);
+      } else {
+        console.warn(`   ⚠ Index template not found: ${config.indexTemplate}`);
+      }
+    } catch (error) {
+      console.warn("   ⚠ Could not process index template:", error);
+    }
   }
 
   // Phase 5: Generate VitePress config (optional)

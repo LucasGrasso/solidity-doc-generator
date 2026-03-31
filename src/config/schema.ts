@@ -91,6 +91,14 @@ export type DocgenConfig = {
    * @default "/"
    */
   vitepressBasePath?: string;
+
+  /**
+   * Path to custom index.md template file
+   * If provided, this template will be copied to the output directory as index.md
+   * instead of generating one. Supports template variables via handlebars syntax.
+   * Available variables: title, description, siteTitle, siteDescription, repository
+   */
+  indexTemplate?: string;
 };
 
 /**
@@ -135,6 +143,7 @@ export function normalizeConfig(
     | "siteDescription"
     | "repository"
     | "vitepressBasePath"
+    | "indexTemplate"
   > & {
     customProperties: Record<string, (doc: any) => string | undefined>;
     plugins: any[];
@@ -145,6 +154,7 @@ export function normalizeConfig(
     siteDescription: string;
     repository: string;
     vitepressBasePath: string;
+    indexTemplate: string | null;
   }
 > {
   return {
@@ -178,5 +188,6 @@ export function normalizeConfig(
     siteDescription: config.siteDescription ?? "API reference",
     repository: config.repository ?? "https://github.com/your-org/your-repo",
     vitepressBasePath: config.vitepressBasePath ?? "/",
+    indexTemplate: config.indexTemplate ? resolve(config.rootDir ? resolve(config.rootDir) : cwd, config.indexTemplate) : null,
   };
 }

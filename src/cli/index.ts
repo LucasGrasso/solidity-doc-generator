@@ -41,6 +41,9 @@ async function main(): Promise<void> {
     } else if (args[i] === "--repository" && args[i + 1]) {
       overrides.repository = args[i + 1];
       i++;
+    } else if (args[i] === "--index-template" && args[i + 1]) {
+      overrides.indexTemplate = args[i + 1];
+      i++;
     } else if (args[i] === "--watch") {
       watch = true;
     } else if (args[i] === "--help" || args[i] === "-h") {
@@ -111,6 +114,7 @@ OPTIONS
   --site-title <title>         Site title for VitePress config
   --site-description <desc>    Site description for VitePress config
   --repository <url>           Repository URL for VitePress config
+  --index-template <path>      Custom index.md template (supports handlebars)
   --watch                      Watch mode (not yet implemented)
   --help, -h                   Show this help message
   --version, -v                Show version
