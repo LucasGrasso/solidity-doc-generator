@@ -27,6 +27,9 @@ async function main(): Promise<void> {
     } else if (args[i] === "--root-dir" && args[i + 1]) {
       overrides.rootDir = args[i + 1];
       i++;
+    } else if (args[i] === "--source-dir" && args[i + 1]) {
+      overrides.sourceDir = args[i + 1];
+      i++;
     } else if (args[i] === "--generate-vitepress-sidebar") {
       overrides.generateVitepressSidebar = true;
     } else if (args[i] === "--site-title" && args[i + 1]) {
@@ -44,7 +47,7 @@ async function main(): Promise<void> {
       printHelp();
       process.exit(0);
     } else if (args[i] === "--version" || args[i] === "-v") {
-      console.log("solidity-docgen v2.0.0");
+      console.log("solidity-docgen v1.0.0");
       process.exit(0);
     }
   }
@@ -101,6 +104,7 @@ USAGE
 OPTIONS
   --config <path>              Path to config file (default: docgen.config.ts)
   --artifacts-dir <dir>        Build artifacts directory (overrides config)
+  --source-dir <dir>           Source directory for contracts (default: contracts)
   --output-dir <dir>           Output directory (overrides config)
   --root-dir <dir>             Project root directory (overrides config)
   --generate-vitepress-sidebar Auto-generate VitePress config from docs

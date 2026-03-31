@@ -20,6 +20,7 @@ export interface PipelineConfig {
   rootDir: string;
   buildInfoDir: string;
   outDir: string;
+  sourceDir?: string;
   exclude?: string[];
   contractKinds?: string[];
   customProperties?: Record<string, (doc: any) => string | undefined>;
@@ -35,7 +36,11 @@ export interface PipelineConfig {
 export async function runPipeline(config: PipelineConfig): Promise<void> {
   // Phase 1: Parse
   console.log("📖 Parsing build artifacts...");
-  const contracts = readBuildInfoContracts(config.rootDir, config.buildInfoDir);
+  const contracts = readBuildInfoContracts(
+    config.rootDir,
+    config.buildInfoDir,
+    config.sourceDir || "contracts",
+  );
   console.log(`   Found ${contracts.length} contract(s)`);
 
   if (contracts.length === 0) {

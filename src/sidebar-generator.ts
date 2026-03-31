@@ -42,12 +42,6 @@ function extractTitleFromMarkdown(content: string): string | null {
 export function generateSidebarFromDir(docsDir: string): SidebarItem[] {
   const items: SidebarItem[] = [];
 
-  // Add overview first
-  items.push({
-    text: "Overview",
-    link: "/index",
-  });
-
   const entries = readdirSync(docsDir)
     .filter(
       (name) =>
@@ -130,7 +124,7 @@ export function generateVitepressConfig(
   repository?: string,
   sidebar: SidebarItem[] = [],
 ): string {
-  const sidebarCode = formatSidebarCode(sidebar, 4);
+  const sidebarCode = formatSidebarCode(sidebar, 6);
 
   return `import { defineConfig } from 'vitepress'
 
@@ -141,20 +135,14 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Contracts', link: '/index.md' },
     ],
 
     sidebar: [
       {
-        text: 'Contracts',
-        items: [
-          {
-            text: 'Overview',
-            link: '/index'
-          },
+        text: 'Home',
+        link: '/'
+      },
 ${sidebarCode}
-        ]
-      }
     ],
 
     socialLinks: [
@@ -189,7 +177,7 @@ function formatSidebarCode(items: SidebarItem[], indent: number = 2): string {
       if (item.items && item.items.length > 0) {
         code += `${nextSpaces}items: [\n`;
         code += formatSidebarCode(item.items, nextIndent + 2);
-        code += `${nextSpaces}]\n`;
+        code += `\n${nextSpaces}]\n`;
       }
 
       code += `${spaces}}`;

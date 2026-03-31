@@ -1,5 +1,5 @@
 /**
- * Solidity Doc Generator v2 - Main Entry Point
+ * Solidity Doc Generator - Main Entry Point
  */
 
 // Core pipeline exports

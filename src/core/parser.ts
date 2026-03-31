@@ -360,6 +360,7 @@ export function extractAstContractDetails(
 export function readBuildInfoContracts(
   rootDir: string,
   buildInfoDir: string,
+  sourceDir: string = "contracts",
 ): ContractDoc[] {
   const files = readdirSync(buildInfoDir).filter((name) =>
     name.endsWith(".output.json"),
@@ -378,7 +379,7 @@ export function readBuildInfoContracts(
     // First pass: extract source-level details (structs, enums, free functions)
     for (const [sourcePath, sourceData] of Object.entries(sourcesByFile)) {
       const normalizedSourcePath = sourcePath.replace(/^project\//, "");
-      if (!normalizedSourcePath.startsWith("src/")) {
+      if (!normalizedSourcePath.startsWith(sourceDir + "/")) {
         continue;
       }
 
@@ -401,7 +402,7 @@ export function readBuildInfoContracts(
     // Second pass: extract contract-level details
     for (const [sourcePath, contracts] of Object.entries(contractsByFile)) {
       const normalizedSourcePath = sourcePath.replace(/^project\//, "");
-      if (!normalizedSourcePath.startsWith("src/")) {
+      if (!normalizedSourcePath.startsWith(sourceDir + "/")) {
         continue;
       }
 

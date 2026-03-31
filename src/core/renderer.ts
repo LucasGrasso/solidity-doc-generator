@@ -92,8 +92,19 @@ export class MarkdownRenderer implements Renderer {
   async render(items: FilteredItem[]): Promise<RenderedFile[]> {
     const files: RenderedFile[] = [];
 
+    // Group items by source file
+    const itemsBySource = new Map<string, FilteredItem[]>();
     for (const item of items) {
-      const { content, filePath } = this.renderItem(item);
+      const sourcePath = item.doc.sourcePath;
+      if (!itemsBySource.has(sourcePath)) {
+        itemsBySource.set(sourcePath, []);
+      }
+      itemsBySource.get(sourcePath)!.push(item);
+    }
+
+    // Render one file per source
+    for (const [, sourceItems] of itemsBySource) {
+      const { content, filePath } = this.renderSource(sourceItems);
       files.push({ filePath, content });
     }
 
@@ -106,34 +117,44 @@ export class MarkdownRenderer implements Renderer {
     return files;
   }
 
-  private renderItem(item: FilteredItem): RenderedFile {
-    const doc = item.doc;
+  private renderSource(items: FilteredItem[]): RenderedFile {
+    if (items.length === 0) {
+      throw new Error("Cannot render source with no items");
+    }
+
+    // Use the first item's metadata as the source reference
+    const firstItem = items[0];
+    const firstDoc = firstItem.doc;
     const outputDir = this.options.outputDir ?? "docs";
 
     // Construct file path with folder structure
     let filePath: string;
-    if (item.folder && item.folder !== "(root)") {
-      filePath = `${outputDir}/${item.folder}/${item.slug}.md`;
+    if (firstItem.folder && firstItem.folder !== "(root)") {
+      filePath = `${outputDir}/${firstItem.folder}/${firstItem.slug}.md`;
     } else {
-      filePath = `${outputDir}/${item.slug}.md`;
+      filePath = `${outputDir}/${firstItem.slug}.md`;
+    }
+
+    // Determine the page title based on number and type of items
+    let pageTitle: string;
+    if (items.length === 1) {
+      pageTitle = firstDoc.contractName;
+    } else {
+      // For multiple items, use a descriptive title
+      const fileLabel = firstDoc.sourcePath.split("/").pop() || "Module";
+      pageTitle = fileLabel.replace(".sol", "");
     }
 
     // Build frontmatter
     const frontmatterData: Record<string, unknown> = {
-      title: doc.contractName,
-      description: doc.notice || doc.details || "No description",
-      sourceFile: doc.sourcePath,
-      contractKind: doc.contractKind,
-      slug: item.slug,
+      title: pageTitle,
+      description: firstDoc.notice || firstDoc.details || "No description",
+      sourceFile: firstDoc.sourcePath,
       ...this.options.frontmatterDefaults,
     };
 
-    if (item.category) {
-      frontmatterData.category = item.category;
-    }
-
-    if (doc.license) {
-      frontmatterData.license = doc.license;
+    if (firstDoc.license) {
+      frontmatterData.license = firstDoc.license;
     }
 
     // Build content
@@ -142,142 +163,187 @@ export class MarkdownRenderer implements Renderer {
     // Frontmatter
     const frontmatter = renderFrontmatter(frontmatterData);
     sections.push(frontmatter);
-    sections.push(""); // blank line after frontmatter
-
-    // Title and metadata
-    sections.push(`# ${doc.contractName}`);
-    sections.push("");
-    sections.push(`**File**: [\`${doc.sourcePath}\`](${doc.sourcePath})`);
-    sections.push(`**Kind**: \`${doc.contractKind}\``);
     sections.push("");
 
-    // Notice and details
-    if (doc.notice) {
-      sections.push(doc.notice);
-      sections.push("");
-    }
+    // Title
+    sections.push(`# ${pageTitle}`);
+    sections.push("");
 
-    if (doc.details) {
-      sections.push("## Details");
-      sections.push("");
-      sections.push(doc.details);
-      sections.push("");
-    }
+    // File metadata
+    sections.push(
+      `**File**: [\`${firstDoc.sourcePath}\`](${firstDoc.sourcePath})`,
+    );
+    sections.push("");
 
-    // ABI Surface
-    if (doc.abi.length > 0) {
-      const functions = doc.abi.filter((item) => item.type === "function");
-      const events = doc.abi.filter((item) => item.type === "event");
-      const errors = doc.abi.filter((item) => item.type === "error");
-
-      // Only show section if there's actual content
-      if (functions.length > 0 || events.length > 0 || errors.length > 0) {
-        sections.push("## ABI Surface");
-        sections.push("");
-
-        if (functions.length > 0) {
-          sections.push("### Functions");
-          sections.push("");
-          for (const fn of functions) {
-            sections.push(`- \`${escapeMarkdown(renderAbiSignature(fn))}\``);
-          }
-          sections.push("");
-        }
-
-        if (events.length > 0) {
-          sections.push("### Events");
-          sections.push("");
-          for (const evt of events) {
-            sections.push(`- \`${escapeMarkdown(renderAbiSignature(evt))}\``);
-          }
-          sections.push("");
-        }
-
-        if (errors.length > 0) {
-          sections.push("### Errors");
-          sections.push("");
-          for (const err of errors) {
-            sections.push(`- \`${escapeMarkdown(renderAbiSignature(err))}\``);
-          }
-          sections.push("");
-        }
+    // Module description (from first item with notice/details)
+    let moduleDesc = "";
+    for (const item of items) {
+      if (item.doc.notice || item.doc.details) {
+        moduleDesc = item.doc.notice || item.doc.details || "";
+        break;
       }
     }
-
-    // Function Surface (from AST)
-    if (doc.astFunctions.length > 0) {
-      sections.push("## Function Surface");
+    if (moduleDesc) {
+      sections.push(moduleDesc);
       sections.push("");
-      for (const fn of doc.astFunctions) {
-        // Normalize signature by removing newlines and extra spaces
-        const normalizedSig = fn.signature.replace(/\s+/g, " ").trim();
-        sections.push(`- \`${escapeMarkdown(normalizedSig)}\``);
-        if (fn.notice) {
-          sections.push(`  - ${fn.notice}`);
-        }
+    }
+
+    // Build table of contents for multiple items
+    if (items.length > 1) {
+      sections.push("## Reference");
+      sections.push("");
+      for (const item of items) {
+        const doc = item.doc;
+        const name = doc.contractName;
+        const anchor = name.toLowerCase().replace(/\s+/g, "-");
+        sections.push(`- [${name}](#${anchor})`);
       }
       sections.push("");
     }
 
-    // Structs
-    if (doc.sourceStructs.length > 0) {
-      sections.push("## Structs");
+    // Render each item as a subsection (or main section if only one)
+    for (const item of items) {
+      const doc = item.doc;
+      const titleLevel = items.length === 1 ? "#" : "##";
+
+      // Title with anchor
+      sections.push(`${titleLevel} ${doc.contractName}`);
       sections.push("");
-      for (const struct of doc.sourceStructs) {
-        sections.push(`### \`struct ${struct.name}\``);
+
+      // Kind badge
+      sections.push(`**Kind**: \`${doc.contractKind}\``);
+      sections.push("");
+
+      // Notice and details
+      if (doc.notice && items.length > 1) {
+        sections.push(doc.notice);
         sections.push("");
-        if (struct.notice) {
-          sections.push(`${struct.notice}`);
+      }
+
+      if (doc.details && items.length > 1) {
+        sections.push("### Details");
+        sections.push("");
+        sections.push(doc.details);
+        sections.push("");
+      }
+
+      // ABI Surface
+      if (doc.abi.length > 0) {
+        const functions = doc.abi.filter((item) => item.type === "function");
+        const events = doc.abi.filter((item) => item.type === "event");
+        const errors = doc.abi.filter((item) => item.type === "error");
+
+        // Only show section if there's actual content
+        if (functions.length > 0 || events.length > 0 || errors.length > 0) {
+          sections.push(`${titleLevel}# ABI Surface`);
           sections.push("");
+
+          if (functions.length > 0) {
+            sections.push(`### Functions`);
+            sections.push("");
+            for (const fn of functions) {
+              sections.push(`- \`${escapeMarkdown(renderAbiSignature(fn))}\``);
+            }
+            sections.push("");
+          }
+
+          if (events.length > 0) {
+            sections.push(`### Events`);
+            sections.push("");
+            for (const evt of events) {
+              sections.push(`- \`${escapeMarkdown(renderAbiSignature(evt))}\``);
+            }
+            sections.push("");
+          }
+
+          if (errors.length > 0) {
+            sections.push(`### Errors`);
+            sections.push("");
+            for (const err of errors) {
+              sections.push(`- \`${escapeMarkdown(renderAbiSignature(err))}\``);
+            }
+            sections.push("");
+          }
         }
-        if (struct.fields.length > 0) {
-          sections.push("| Field | Type | Description |");
-          sections.push("|-------|------|-------------|");
-          for (const field of struct.fields) {
-            const desc = field.property ? escapeMarkdown(field.property) : "-";
-            sections.push(
-              `| \`${escapeMarkdown(field.name)}\` | \`${escapeMarkdown(field.type)}\` | ${desc} |`,
-            );
+      }
+
+      // Function Surface (from AST)
+      if (doc.astFunctions.length > 0) {
+        sections.push(`${titleLevel}# Function Surface`);
+        sections.push("");
+        for (const fn of doc.astFunctions) {
+          // Normalize signature by removing newlines and extra spaces
+          const normalizedSig = fn.signature.replace(/\s+/g, " ").trim();
+          sections.push(`- \`${escapeMarkdown(normalizedSig)}\``);
+          if (fn.notice) {
+            sections.push(`  - ${fn.notice}`);
           }
         }
         sections.push("");
       }
-    }
 
-    // Enums
-    if (doc.sourceEnums.length > 0) {
-      sections.push("## Enums");
-      sections.push("");
-      for (const enumDoc of doc.sourceEnums) {
-        sections.push(`### \`enum ${enumDoc.name}\``);
+      // Structs
+      if (doc.sourceStructs.length > 0) {
+        sections.push(`${titleLevel}# Structs`);
         sections.push("");
-        if (enumDoc.notice) {
-          sections.push(`${enumDoc.notice}`);
+        for (const struct of doc.sourceStructs) {
+          sections.push(`### \`struct ${struct.name}\``);
+          sections.push("");
+          if (struct.notice) {
+            sections.push(`${struct.notice}`);
+            sections.push("");
+          }
+          if (struct.fields.length > 0) {
+            sections.push("| Field | Type | Description |");
+            sections.push("|-------|------|-------------|");
+            for (const field of struct.fields) {
+              const desc = field.property
+                ? escapeMarkdown(field.property)
+                : "-";
+              sections.push(
+                `| \`${escapeMarkdown(field.name)}\` | \`${escapeMarkdown(field.type)}\` | ${desc} |`,
+              );
+            }
+          }
           sections.push("");
         }
-        if (enumDoc.values.length > 0) {
-          sections.push("| Variant | Description |");
-          sections.push("|---------|-------------|");
-          for (const val of enumDoc.values) {
-            const desc = val.variant ? escapeMarkdown(val.variant) : "-";
-            sections.push(`| \`${escapeMarkdown(val.name)}\` | ${desc} |`);
+      }
+
+      // Enums
+      if (doc.sourceEnums.length > 0) {
+        sections.push(`${titleLevel}# Enums`);
+        sections.push("");
+        for (const enumDoc of doc.sourceEnums) {
+          sections.push(`### \`enum ${enumDoc.name}\``);
+          sections.push("");
+          if (enumDoc.notice) {
+            sections.push(`${enumDoc.notice}`);
+            sections.push("");
+          }
+          if (enumDoc.values.length > 0) {
+            sections.push("| Variant | Description |");
+            sections.push("|---------|-------------|");
+            for (const val of enumDoc.values) {
+              const desc = val.variant ? escapeMarkdown(val.variant) : "-";
+              sections.push(`| \`${escapeMarkdown(val.name)}\` | ${desc} |`);
+            }
+          }
+          sections.push("");
+        }
+      }
+
+      // Free Functions
+      if (doc.sourceFreeFunctions.length > 0) {
+        sections.push(`${titleLevel}# Top-Level Functions`);
+        sections.push("");
+        for (const fn of doc.sourceFreeFunctions) {
+          sections.push(`- \`${escapeMarkdown(fn.signature)}\``);
+          if (fn.notice) {
+            sections.push(`  - ${fn.notice}`);
           }
         }
         sections.push("");
       }
-    }
-
-    // Free Functions
-    if (doc.sourceFreeFunctions.length > 0) {
-      sections.push("## Top-Level Functions");
-      sections.push("");
-      for (const fn of doc.sourceFreeFunctions) {
-        sections.push(`- \`${escapeMarkdown(fn.signature)}\``);
-        if (fn.notice) {
-          sections.push(`  - ${fn.notice}`);
-        }
-      }
-      sections.push("");
     }
 
     const content = sections.join("\n");

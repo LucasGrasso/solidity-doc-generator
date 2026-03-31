@@ -1,6 +1,11 @@
-# Solidity Doc Generator v2
+> [!CAUTION]
+> This project was (mostly) AI-generated. It should be considered a **proof of concept** or **starting point** for development. Contributions to implement missing features, fix bugs, and improve documentation are welcome!
+
+# Solidity Doc Generator
 
 A **modular, markdown-based documentation generator** for Solidity contracts. Output clean markdown files with YAML frontmatter compatible with any static site generator (Next.js, VitePress, MkDocs, etc.).
+
+It has a built-in integration for VitePress.
 
 ## Features
 
@@ -348,7 +353,3 @@ MIT
 - [OpenZeppelin's solidity-docgen](https://github.com/OpenZeppelin/solidity-docgen) — Inspiration
 - [Handlebars](https://handlebarsjs.com/) — Template engine
 - [VitePress](https://vitepress.dev/) — Recommended static site generator
-
----
-
-**Version**: 2.0.0 | **Status**: Active Development | **Last Updated**: March 31, 2026

@@ -18,6 +18,12 @@ export type DocgenConfig = {
   buildInfoDir?: string;
 
   /**
+   * Source directory for Solidity contracts (default: contracts)
+   * Used to filter which source files to document
+   */
+  sourceDir?: string;
+
+  /**
    * Output directory (default: docs)
    */
   outDir?: string;
@@ -154,6 +160,7 @@ export function normalizeConfig(
       "library",
       "source",
     ],
+    sourceDir: config.sourceDir ?? "contracts",
     customProperties: config.customProperties ?? {},
     plugins: config.plugins ?? [],
     frontmatter: config.frontmatter ?? {},

@@ -140,21 +140,31 @@ export function buildFilteredItems(
   options: FilterOptions = {},
 ): FilteredItem[] {
   const filtered = filterContracts(contracts, options);
+  const sourceToSlug = new Map<string, string>();
   const used = new Set<string>();
 
-  return filtered.map((doc) => {
-    // Generate slug from just the contract name for shorter filenames
-    const base = doc.contractName;
-    let slug = toSlug(base);
-    let counter = 2;
+  // First pass: assign slugs to unique source files
+  for (const doc of filtered) {
+    if (!sourceToSlug.has(doc.sourcePath)) {
+      // Generate slug from source filename (without .sol extension)
+      const sourceFile = basename(doc.sourcePath).replace(/\.sol$/, "");
+      let slug = toSlug(sourceFile);
+      let counter = 2;
 
-    // Ensure slug uniqueness
-    while (used.has(slug)) {
-      slug = `${toSlug(base)}-${counter}`;
-      counter += 1;
+      // Ensure slug uniqueness
+      while (used.has(slug)) {
+        slug = `${toSlug(sourceFile)}-${counter}`;
+        counter += 1;
+      }
+
+      used.add(slug);
+      sourceToSlug.set(doc.sourcePath, slug);
     }
+  }
 
-    used.add(slug);
+  // Second pass: create filtered items with source-file-based slugs
+  return filtered.map((doc) => {
+    const slug = sourceToSlug.get(doc.sourcePath)!;
 
     return {
       doc,
