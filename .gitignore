@@ -13,9 +13,6 @@ site/
 
 # Node modules
 node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
 
 # IDE
 .vscode/
