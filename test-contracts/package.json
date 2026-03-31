@@ -2,10 +2,19 @@
   "name": "test-contracts",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "docgen": "solidity-docgen --generate-vitepress-sidebar",
+    "docgen:watch": "npm run docgen -- --watch",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
   "devDependencies": {
     "@types/node": "^22.19.15",
     "hardhat": "^3.3.0",
     "solidity-doc-generator": "file:..",
-    "typescript": "~5.8.0"
+    "typescript": "~5.8.0",
+    "vitepress": "^1.6.0",
+    "vue": "^3.4.0"
   }
 }
