@@ -31,6 +31,7 @@ export interface PipelineConfig {
   siteTitle?: string;
   siteDescription?: string;
   repository?: string;
+  vitepressBasePath?: string;
 }
 
 export async function runPipeline(config: PipelineConfig): Promise<void> {
