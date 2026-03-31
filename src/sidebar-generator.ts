@@ -131,6 +131,7 @@ export function generateVitepressConfig(
 export default defineConfig({
   title: "${title.replace(/"/g, '\\"')}",
   description: "${description.replace(/"/g, '\\"')}",
+  ignoreDeadLinks: true,
   
   themeConfig: {
     nav: [
