@@ -272,9 +272,9 @@ export class MarkdownRenderer implements Renderer {
       sections.push("## Top-Level Functions");
       sections.push("");
       for (const fn of doc.sourceFreeFunctions) {
-        sections.push(`- ${renderCodeBlock(fn.signature, "solidity")}`);
+        sections.push(`- \`${escapeMarkdown(fn.signature)}\``);
         if (fn.notice) {
-          sections.push(`  ${fn.notice}`);
+          sections.push(`  - ${fn.notice}`);
         }
       }
       sections.push("");
