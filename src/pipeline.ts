@@ -139,6 +139,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
       const sidebar = generateSidebarFromDir(
         config.outDir,
         config.customDocsSidebarLabel || "Guides",
+        config.customDocsDir || undefined,
       );
       const vitepressConfig = generateVitepressConfig(
         config.siteTitle || "Documentation",

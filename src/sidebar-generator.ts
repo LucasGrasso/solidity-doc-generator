@@ -42,6 +42,7 @@ function extractTitleFromMarkdown(content: string): string | null {
 export function generateSidebarFromDir(
   docsDir: string,
   customDocsFolderName: string = "Guides",
+  customDocsDirPath?: string,
 ): SidebarItem[] {
   const items: SidebarItem[] = [];
   let customDocsItem: SidebarItem | null = null;
@@ -53,15 +54,19 @@ export function generateSidebarFromDir(
     )
     .sort();
 
+  // Extract the folder name from customDocsDirPath (e.g., "./guides" -> "guides")
+  const customDirName = customDocsDirPath
+    ? customDocsDirPath.split("/").pop()?.toLowerCase()
+    : "guides";
+
   for (const entry of entries) {
     const fullPath = join(docsDir, entry);
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
       const folderItem = buildFolderItem(fullPath, entry);
-      // Check if this is a custom docs folder (a, guides, etc. that came from customDocsDir)
-      // For now, we'll collect all non-contract folders as custom docs
-      if (entry.toLowerCase() !== "contracts") {
+      // Only treat the specific customDocsDir folder as custom docs
+      if (entry.toLowerCase() === customDirName) {
         if (!customDocsItem) {
           customDocsItem = {
             text: customDocsFolderName,
@@ -69,8 +74,9 @@ export function generateSidebarFromDir(
             items: [],
           };
         }
-        if (customDocsItem.items) {
-          customDocsItem.items.push(folderItem);
+        // Merge the custom docs folder's items directly
+        if (customDocsItem.items && folderItem.items) {
+          customDocsItem.items.push(...folderItem.items);
         }
       } else {
         items.push(folderItem);
