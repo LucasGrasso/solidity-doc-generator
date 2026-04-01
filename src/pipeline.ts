@@ -2,7 +2,13 @@
  * Main pipeline: parse → filter → render
  */
 
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+  cpSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import Handlebars from "handlebars";
 
@@ -34,6 +40,8 @@ export interface PipelineConfig {
   repository?: string;
   vitepressBasePath?: string;
   indexTemplate?: string | null;
+  customDocsDir?: string | null;
+  customDocsSidebarLabel?: string;
 }
 
 export async function runPipeline(config: PipelineConfig): Promise<void> {
@@ -82,6 +90,18 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
     console.log(`   ✓ ${filePath}`);
   }
 
+  // Phase 4.25: Copy custom docs directory (optional)
+  if (config.customDocsDir && existsSync(config.customDocsDir)) {
+    console.log("📂 Copying custom documentation files...");
+    try {
+      // Copy directly to output root, preserving folder structure
+      cpSync(config.customDocsDir, config.outDir, { recursive: true });
+      console.log(`   ✓ Custom docs copied from ${config.customDocsDir}`);
+    } catch (error) {
+      console.warn("   ⚠ Could not copy custom docs directory:", error);
+    }
+  }
+
   // Phase 4.5: Process custom index template (optional)
   if (config.indexTemplate) {
     console.log("📄 Processing custom index template...");
@@ -89,16 +109,17 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
       if (existsSync(config.indexTemplate)) {
         const templateContent = readFileSync(config.indexTemplate, "utf8");
         const template = Handlebars.compile(templateContent);
-        
+
         // Prepare template variables
         const templateVars = {
           title: config.siteTitle || "Documentation",
           description: config.siteDescription || "API reference",
           siteTitle: config.siteTitle || "Documentation",
           siteDescription: config.siteDescription || "API reference",
-          repository: config.repository || "https://github.com/your-org/your-repo",
+          repository:
+            config.repository || "https://github.com/your-org/your-repo",
         };
-        
+
         const renderedIndex = template(templateVars);
         const indexPath = join(config.outDir, "index.md");
         writeFileSync(indexPath, renderedIndex, "utf8");
@@ -115,7 +136,10 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   if (config.generateVitepressSidebar) {
     console.log("📝 Generating VitePress sidebar...");
     try {
-      const sidebar = generateSidebarFromDir(config.outDir);
+      const sidebar = generateSidebarFromDir(
+        config.outDir,
+        config.customDocsSidebarLabel || "Guides",
+      );
       const vitepressConfig = generateVitepressConfig(
         config.siteTitle || "Documentation",
         config.siteDescription || "API reference",

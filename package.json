@@ -71,7 +71,8 @@
   },
   "homepage": "https://github.com/LucasGrasso/solidity-doc-generator#readme",
   "dependencies": {
-    "handlebars": "^4.7.9"
+    "handlebars": "^4.7.9",
+    "markdown-it-mathjax3": "^4.3.2"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

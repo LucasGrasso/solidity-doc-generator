@@ -17,15 +17,19 @@ Built-in integration for **VitePress** with automatic sidebar generation.
 
 🔌 **Plugin System** — Extend functionality with hook points (`onItem`, `onFilter`, `onWrite`, `onFinish`).
 
-🎨 **Customizable Templates** — Override default Handlebars templates for custom layouts.
+🎨 **Customizable Templates** — Override default Handlebars templates for custom layouts, or provide a custom home page template.
 
-📝 **Custom Properties** — Extract `@custom:*` tags from docstrings and inject into rendered output.
+� **LaTeX Math Support** — Full LaTeX formula rendering with KaTeX (inline `$...$` and display `$$...$$` math blocks).
+
+�📝 **Custom Properties** — Extract `@custom:*` tags from docstrings and inject into rendered output.
 
 ⚙️ **Configuration File** — Simple `.ts`/`.js`/`.json` config file.
 
 🔍 **Source-based Grouping** — Multiple contracts from the same source file grouped into one markdown file (OpenZeppelin style).
 
 🚀 **VitePress Integration** — Automatic sidebar generation and `.vitepress/config.ts` scaffolding.
+
+📚 **Custom Documentation** — Include custom markdown files (guides, tutorials, contributing docs) alongside generated contract documentation.
 
 ## Quick Start
 
@@ -86,13 +90,16 @@ npx solidity-docgen --artifacts-dir ./build/build-info
 # Override output directory
 npx solidity-docgen --output-dir ./generated-docs
 
+# Include custom documentation and generate VitePress config
+npx solidity-docgen --custom-docs-dir ./docs-content --generate-vitepress-sidebar
+
 # Combine config file with CLI overrides
 npx solidity-docgen --config myconfig.ts --artifacts-dir ./build --output-dir ./docs
 ```
 
-### Custom Templates
+### Custom Contract Templates
 
-Override the default Handlebars template:
+Override the default Handlebars template for rendering contracts:
 
 ```typescript
 // docgen.config.ts
@@ -121,7 +128,7 @@ Create `my-templates/contract.hbs`:
 {{/each}}
 ```
 
-Available template variables: `contractName`, `description`, `sourceFile`, `functions`, `events`, `errors`, etc.
+Available variables: `contractName`, `description`, `sourceFile`, `functions`, `events`, `errors`, etc.
 
 ### Custom Properties
 
@@ -201,6 +208,84 @@ export default {
 };
 ```
 
+### Custom Index Template
+
+Provide a custom home page template instead of auto-generating index.md:
+
+```typescript
+// docgen.config.ts
+export default {
+  outDir: "docs",
+  indexTemplate: "./templates/index.md",
+};
+```
+
+Create `templates/index.md` with Handlebars variables:
+
+```markdown
+---
+layout: home
+---
+
+# {{siteTitle}}
+
+{{siteDescription}}
+
+[View Documentation](/api/) | [GitHub]({{repository}})
+```
+
+Available variables: `title`, `description`, `siteTitle`, `siteDescription`, `repository`
+
+### Include Custom Documentation
+
+Merge custom markdown files (guides, tutorials, etc.) with generated contract documentation:
+
+```typescript
+// docgen.config.ts
+export default {
+  outDir: "docs",
+  customDocsDir: "./docs-content",
+};
+```
+
+Folder structure:
+
+```
+docs-content/
+├── guides/
+│   ├── getting-started.md
+│   └── integration.md
+├── contributing.md
+└── faq.md
+```
+
+Files are copied to the output directory root, preserving folder structure and appearing alongside contract documentation in the sidebar without grouping.
+
+### LaTeX Math Formulas
+
+Write mathematical equations in your documentation using LaTeX syntax. Both inline and display math are supported out of the box:
+
+**Inline math** (within text):
+
+```markdown
+The little-endian encoding of integer $I$ is represented as ${B_{n}\ldots{B_0}}_{256}$.
+```
+
+**Display math** (separate blocks):
+
+```markdown
+The encoding function is defined as:
+
+$$
+\text{Enc}_{\text{LE}}: \mathbb{Z}^+ \rightarrow \mathbb{B};
+(B_n \ldots B_0)_{256} \rightarrow (B_0, B_1, \ldots, B_n)
+$$
+```
+
+LaTeX formulas are automatically rendered in the generated VitePress site using KaTeX. No additional setup required—the markdown-it-mathjax3 plugin is included as a dependency.
+
+See the [scale-codec documentation](https://github.com/LucasGrasso/solidity-scale-codec/blob/main/DEFINITIONS.md) for real-world examples of mathematical notation in technical documentation.
+
 ### Integrate with VitePress
 
 Our tool can automatically generate a complete VitePress site:
@@ -226,6 +311,11 @@ export default {
   generateVitepressSidebar: true,
   siteTitle: "My Contract Docs",
   siteDescription: "Documentation for my smart contracts",
+  repository: "https://github.com/owner/repo",
+  vitepressBasePath: "/repo-name/", // for GitHub Pages
+  indexTemplate: "./templates/index.md",
+  customDocsDir: "./docs-content",
+  customDocsSidebarLabel: "Guides", // optional, default is "Guides"
 };
 ```
 
@@ -233,7 +323,9 @@ This generates:
 
 - Markdown files in `docs/api/`
 - `.vitepress/config.ts` with auto-generated sidebar
-- Ready-to-run VitePress site
+- Custom home page from template
+- Custom documentation grouped under "Guides" category above contracts
+- Ready-to-run VitePress site with built-in search
 
 ## Configuration Options
 
@@ -256,6 +348,13 @@ type DocgenConfig = {
   generateVitepressSidebar?: boolean; // Generate .vitepress/config.ts
   siteTitle?: string; // VitePress site title
   siteDescription?: string; // VitePress site description
+  vitepressBasePath?: string; // Base path for GitHub Pages (default: /)
+  repository?: string; // GitHub repository URL
+
+  // Custom Content
+  indexTemplate?: string; // Path to custom index.md template
+  customDocsDir?: string; // Directory with custom markdown files
+  customDocsSidebarLabel?: string; // Label for custom docs in sidebar (default: Guides)
 };
 ```
 
@@ -273,15 +372,25 @@ npx solidity-docgen --artifacts-dir ./build/build-info
 # Override output directory
 npx solidity-docgen --output-dir ./generated-docs
 
-# Generate VitePress config
-npx solidity-docgen --generate-vitepress-sidebar
+# Set custom index template
+npx solidity-docgen --index-template ./templates/index.md
+
+# Include custom markdown files with custom sidebar label
+npx solidity-docgen --custom-docs-dir ./docs-content --custom-docs-label "Documentation"
+
+# Generate VitePress config with metadata
+npx solidity-docgen --generate-vitepress-sidebar \
+  --site-title "My Docs" \
+  --repository "https://github.com/owner/repo"
 
 # Combine multiple overrides
 npx solidity-docgen \
   --source-dir ./contracts \
   --artifacts-dir ./build \
   --output-dir ./docs \
-  --generate-vitepress-sidebar
+  --generate-vitepress-sidebar \
+  --custom-docs-dir ./docs-content \
+  --custom-docs-label "Guides"
 ```
 
 All CLI parameters override corresponding config file settings.
@@ -401,6 +510,34 @@ customProperties: {
   },
 }
 ```
+
+**Q: Custom docs not appearing in sidebar**
+
+A: Ensure the `customDocsDir` path is correct and relative to your project root:
+
+```typescript
+export default {
+  customDocsDir: "./docs-content", // relative to project root
+  generateVitepressSidebar: true,
+};
+```
+
+**Q: Custom index template variables not substituting**
+
+A: Make sure to use the correct Handlebars syntax and variable names:
+
+```markdown
+<!-- Correct: double braces -->
+
+{{siteTitle}}
+{{repository}}
+
+<!-- Incorrect: single braces won't work -->
+
+{siteTitle}
+```
+
+Available variables: `title`, `description`, `siteTitle`, `siteDescription`, `repository`
 
 ## Testing
 

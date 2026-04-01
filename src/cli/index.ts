@@ -44,6 +44,12 @@ async function main(): Promise<void> {
     } else if (args[i] === "--index-template" && args[i + 1]) {
       overrides.indexTemplate = args[i + 1];
       i++;
+    } else if (args[i] === "--custom-docs-dir" && args[i + 1]) {
+      overrides.customDocsDir = args[i + 1];
+      i++;
+    } else if (args[i] === "--custom-docs-label" && args[i + 1]) {
+      overrides.customDocsSidebarLabel = args[i + 1];
+      i++;
     } else if (args[i] === "--watch") {
       watch = true;
     } else if (args[i] === "--help" || args[i] === "-h") {
@@ -115,6 +121,8 @@ OPTIONS
   --site-description <desc>    Site description for VitePress config
   --repository <url>           Repository URL for VitePress config
   --index-template <path>      Custom index.md template (supports handlebars)
+  --custom-docs-dir <dir>      Directory with custom markdown files to include
+  --custom-docs-label <text>   Label for custom docs section in sidebar (default: Guides)
   --watch                      Watch mode (not yet implemented)
   --help, -h                   Show this help message
   --version, -v                Show version

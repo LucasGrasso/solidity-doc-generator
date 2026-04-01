@@ -39,8 +39,9 @@ function extractTitleFromMarkdown(content: string): string | null {
 /**
  * Scan directory recursively and build sidebar structure
  */
-export function generateSidebarFromDir(docsDir: string): SidebarItem[] {
+export function generateSidebarFromDir(docsDir: string, customDocsFolderName: string = "Guides"): SidebarItem[] {
   const items: SidebarItem[] = [];
+  let customDocsItem: SidebarItem | null = null;
 
   const entries = readdirSync(docsDir)
     .filter(
@@ -54,10 +55,59 @@ export function generateSidebarFromDir(docsDir: string): SidebarItem[] {
     const stat = statSync(fullPath);
 
     if (stat.isDirectory()) {
-      items.push(buildFolderItem(fullPath, entry));
+      const folderItem = buildFolderItem(fullPath, entry);
+      // Check if this is a custom docs folder (a, guides, etc. that came from customDocsDir)
+      // For now, we'll collect all non-contract folders as custom docs
+      if (entry.toLowerCase() !== "contracts") {
+        if (!customDocsItem) {
+          customDocsItem = {
+            text: customDocsFolderName,
+            collapsed: true,
+            items: [],
+          };
+        }
+        if (customDocsItem.items) {
+          customDocsItem.items.push(folderItem);
+        }
+      } else {
+        items.push(folderItem);
+      }
+    } else if (entry.endsWith(".md")) {
+      // Root-level markdown files go to custom docs
+      const filename = entry.replace(/\.md$/, "");
+      let text = filenameToText(filename);
+
+      // Try to extract title from markdown frontmatter
+      try {
+        const content = readFileSync(fullPath, "utf8");
+        const title = extractTitleFromMarkdown(content);
+        if (title) {
+          text = title;
+        }
+      } catch (error) {
+        // Fall back to filename-based text
+      }
+
+      if (!customDocsItem) {
+        customDocsItem = {
+          text: customDocsFolderName,
+          collapsed: true,
+          items: [],
+        };
+      }
+      if (customDocsItem.items) {
+        customDocsItem.items.push({
+          text,
+          link: `/${filename}`,
+        });
+      }
     }
   }
 
+  // Custom docs first, then contracts
+  if (customDocsItem) {
+    items.unshift(customDocsItem);
+  }
   return items;
 }
 
@@ -131,12 +181,18 @@ export function generateVitepressConfig(
   const sidebarCode = formatSidebarCode(sidebar, 6);
 
   return `import { defineConfig } from 'vitepress'
+import mathjax3 from 'markdown-it-mathjax3'
 
 export default defineConfig({
   base: '${basePath}',
   title: "${title.replace(/"/g, '\\"')}",
   description: "${description.replace(/"/g, '\\"')}",
   ignoreDeadLinks: true,
+  markdown: {
+    config: (md) => {
+      md.use(mathjax3)
+    }
+  },
   
   themeConfig: {
     search: {

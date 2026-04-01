@@ -99,6 +99,20 @@ export type DocgenConfig = {
    * Available variables: title, description, siteTitle, siteDescription, repository
    */
   indexTemplate?: string;
+
+  /**
+   * Directory containing custom markdown files to include in documentation
+   * Files will be copied to the output directory, preserving folder structure
+   * Can include guides, tutorials, contributing docs, etc.
+   * Custom docs are merged with generated contract docs in the sidebar
+   */
+  customDocsDir?: string;
+
+  /**
+   * Label for custom docs section in VitePress sidebar
+   * @default "Guides"
+   */
+  customDocsSidebarLabel?: string;
 };
 
 /**
@@ -144,6 +158,8 @@ export function normalizeConfig(
     | "repository"
     | "vitepressBasePath"
     | "indexTemplate"
+    | "customDocsDir"
+    | "customDocsSidebarLabel"
   > & {
     customProperties: Record<string, (doc: any) => string | undefined>;
     plugins: any[];
@@ -155,6 +171,8 @@ export function normalizeConfig(
     repository: string;
     vitepressBasePath: string;
     indexTemplate: string | null;
+    customDocsDir: string | null;
+    customDocsSidebarLabel: string;
   }
 > {
   return {
@@ -188,6 +206,18 @@ export function normalizeConfig(
     siteDescription: config.siteDescription ?? "API reference",
     repository: config.repository ?? "https://github.com/your-org/your-repo",
     vitepressBasePath: config.vitepressBasePath ?? "/",
-    indexTemplate: config.indexTemplate ? resolve(config.rootDir ? resolve(config.rootDir) : cwd, config.indexTemplate) : null,
+    indexTemplate: config.indexTemplate
+      ? resolve(
+          config.rootDir ? resolve(config.rootDir) : cwd,
+          config.indexTemplate,
+        )
+      : null,
+    customDocsDir: config.customDocsDir
+      ? resolve(
+          config.rootDir ? resolve(config.rootDir) : cwd,
+          config.customDocsDir,
+        )
+      : null,
+    customDocsSidebarLabel: config.customDocsSidebarLabel ?? "Guides",
   };
 }
