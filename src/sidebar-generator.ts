@@ -39,7 +39,10 @@ function extractTitleFromMarkdown(content: string): string | null {
 /**
  * Scan directory recursively and build sidebar structure
  */
-export function generateSidebarFromDir(docsDir: string, customDocsFolderName: string = "Guides"): SidebarItem[] {
+export function generateSidebarFromDir(
+  docsDir: string,
+  customDocsFolderName: string = "Guides",
+): SidebarItem[] {
   const items: SidebarItem[] = [];
   let customDocsItem: SidebarItem | null = null;
 
@@ -197,6 +200,11 @@ export default defineConfig({
   themeConfig: {
     search: {
       provider: 'local'
+    },
+
+    footer: {
+      message: 'Created with solidity-doc-generator',
+      copyright: ''
     },
 
     nav: [

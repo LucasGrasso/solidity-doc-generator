@@ -167,9 +167,11 @@ export class MarkdownRenderer implements Renderer {
     sections.push(frontmatter);
     sections.push("");
 
-    // Title
-    sections.push(`# ${pageTitle}`);
-    sections.push("");
+    // Title - only add if multiple items (otherwise it will be added by item render)
+    if (items.length > 1) {
+      sections.push(`# ${pageTitle}`);
+      sections.push("");
+    }
 
     // File metadata
     sections.push(
@@ -382,7 +384,14 @@ export class MarkdownRenderer implements Renderer {
 
     for (const item of items) {
       const doc = item.doc;
-      const link = `[${doc.contractName}](./${item.slug}.md)`;
+      // Build path based on folder structure
+      let relPath: string;
+      if (item.folder && item.folder !== "(root)") {
+        relPath = `./${item.folder}/${item.slug}`;
+      } else {
+        relPath = `./${item.slug}`;
+      }
+      const link = `[${doc.contractName}](${relPath})`;
       sections.push(
         `| ${link} | \`${doc.sourcePath}\` | \`${doc.contractKind}\` |`,
       );
