@@ -9,7 +9,7 @@ import {
   readFileSync,
   cpSync,
 } from "node:fs";
-import { join, dirname, sep } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import Handlebars from "handlebars";
 
 import {
@@ -96,8 +96,9 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
     try {
       // Extract folder name from customDocsDir (e.g., "D:\path\guides" -> "guides")
       const customDocsFolderName =
-        config.customDocsDir.split(sep).pop() || "customdocs";
-      const customDocsOutputPath = config.outDir + sep + customDocsFolderName;
+        config.customDocsDir.replace(/\\/g, "/").split("/").pop() ||
+        "customdocs";
+      const customDocsOutputPath = resolve(config.outDir, customDocsFolderName);
 
       // Copy to a named subfolder to preserve structure and identify custom docs
       cpSync(config.customDocsDir, customDocsOutputPath, { recursive: true });
