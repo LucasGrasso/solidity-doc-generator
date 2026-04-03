@@ -54,9 +54,9 @@ export function generateSidebarFromDir(
     )
     .sort();
 
-  // Extract the folder name from customDocsDirPath (e.g., "./guides" -> "guides")
+  // Extract the folder name from customDocsDirPath (e.g., "D:\path\guides" -> "guides")
   const customDirName = customDocsDirPath
-    ? customDocsDirPath.split("/").pop()?.toLowerCase()
+    ? customDocsDirPath.replace(/\\/g, "/").split("/").pop()?.toLowerCase()
     : "guides";
 
   for (const entry of entries) {
@@ -74,9 +74,12 @@ export function generateSidebarFromDir(
             items: [],
           };
         }
-        // Merge the custom docs folder's items directly
+        // Merge the custom docs folder's items with path prefix
         if (customDocsItem.items && folderItem.items) {
-          customDocsItem.items.push(...folderItem.items);
+          const prefixedItems = folderItem.items.map((item) =>
+            prefixLinks(item, `/${entry}`),
+          );
+          customDocsItem.items.push(...prefixedItems);
         }
       } else {
         items.push(folderItem);
@@ -118,6 +121,22 @@ export function generateSidebarFromDir(
     items.unshift(customDocsItem);
   }
   return items;
+}
+
+/**
+ * Prefix all links in a sidebar item tree with a path prefix
+ */
+function prefixLinks(item: SidebarItem, prefix: string): SidebarItem {
+  const prefixed = { ...item };
+  if (prefixed.link) {
+    prefixed.link = prefix + prefixed.link;
+  }
+  if (prefixed.items) {
+    prefixed.items = prefixed.items.map((subItem) =>
+      prefixLinks(subItem, prefix),
+    );
+  }
+  return prefixed;
 }
 
 /**
