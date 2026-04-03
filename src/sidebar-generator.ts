@@ -74,12 +74,9 @@ export function generateSidebarFromDir(
             items: [],
           };
         }
-        // Merge the custom docs folder's items with path prefix
+        // Merge the custom docs folder's items (already have correct paths from buildFolderItem)
         if (customDocsItem.items && folderItem.items) {
-          const prefixedItems = folderItem.items.map((item) =>
-            prefixLinks(item, `/${entry}`),
-          );
-          customDocsItem.items.push(...prefixedItems);
+          customDocsItem.items.push(...folderItem.items);
         }
       } else {
         items.push(folderItem);
@@ -121,22 +118,6 @@ export function generateSidebarFromDir(
     items.unshift(customDocsItem);
   }
   return items;
-}
-
-/**
- * Prefix all links in a sidebar item tree with a path prefix
- */
-function prefixLinks(item: SidebarItem, prefix: string): SidebarItem {
-  const prefixed = { ...item };
-  if (prefixed.link) {
-    prefixed.link = prefix + prefixed.link;
-  }
-  if (prefixed.items) {
-    prefixed.items = prefixed.items.map((subItem) =>
-      prefixLinks(subItem, prefix),
-    );
-  }
-  return prefixed;
 }
 
 /**
