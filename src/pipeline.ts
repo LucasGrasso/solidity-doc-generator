@@ -94,8 +94,12 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   if (config.customDocsDir && existsSync(config.customDocsDir)) {
     console.log("📂 Copying custom documentation files...");
     try {
-      // Copy directly to output root, preserving folder structure
-      cpSync(config.customDocsDir, config.outDir, { recursive: true });
+      // Extract folder name from customDocsDir (e.g., "./guides" -> "guides")
+      const customDocsFolderName = config.customDocsDir.split("/").pop() || "customdocs";
+      const customDocsOutputPath = join(config.outDir, customDocsFolderName);
+
+      // Copy to a named subfolder to preserve structure and identify custom docs
+      cpSync(config.customDocsDir, customDocsOutputPath, { recursive: true });
       console.log(`   ✓ Custom docs copied from ${config.customDocsDir}`);
     } catch (error) {
       console.warn("   ⚠ Could not copy custom docs directory:", error);
