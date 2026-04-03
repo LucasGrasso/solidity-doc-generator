@@ -1,6 +1,6 @@
 {
   "name": "solidity-doc-generator",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Modular, markdown-based documentation generator for Solidity contracts. Output clean markdown with YAML frontmatter, compatible with any static site generator.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
