@@ -665,6 +665,7 @@ export function extractSourceLevelDetails(
   let freeFunctions = nodes
     .filter((node) => node.nodeType === "FunctionDefinition")
     .filter((node) => node.implemented !== false)
+    .filter((node) => node.visibility !== "private")
     .map((node) => ({
       signature: renderAstFunctionSignature(node),
       notice: getNoticeFromDocText(node.documentation),
@@ -872,7 +873,16 @@ export function extractAstContractDetails(
     }
 
     // Keep only implemented callable members to avoid duplicates from interface-like declarations.
-    return node.implemented !== false;
+    if (node.implemented === false) {
+      return false;
+    }
+
+    // Exclude private functions from documentation
+    if (node.visibility === "private") {
+      return false;
+    }
+
+    return true;
   });
 
   // Try to get structs and enums from AST first, fall back to source parsing
