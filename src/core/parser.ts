@@ -15,6 +15,10 @@ import type {
   ContractAstDetails,
   FunctionDoc,
   SourceLevelDetails,
+  StructDoc,
+  StructField,
+  EnumDoc,
+  EnumValue,
 } from "./types.js";
 
 // =============================================================================
@@ -273,13 +277,358 @@ export function renderAbiSignature(item: AbiItem): string {
 // Source-Level Extraction (structs, enums, free functions)
 // =============================================================================
 
+/**
+ * Extract file-level structs and enums from source code.
+ * File-level = defined outside any contract
+ */
+function extractFileTypesFromSource(sourceText: string): {
+  structs: StructDoc[];
+  enums: EnumDoc[];
+} {
+  const structs: StructDoc[] = [];
+  const enums: EnumDoc[] = [];
+  const lines = sourceText.split("\n");
+
+  let contractDepth = 0;
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    i++;
+
+    // Skip empty lines and comments
+    if (!line || line.startsWith("//") || line.startsWith("*")) {
+      continue;
+    }
+
+    // Update contract depth
+    const openBraces = (line.match(/\{/g) || []).length;
+    const closeBraces = (line.match(/\}/g) || []).length;
+
+    // Detect struct start (only at file level)
+    if (contractDepth === 0 && line.match(/^struct\s+(\w+)\s*\{/)) {
+      const nameMatch = line.match(/^struct\s+(\w+)/);
+      if (nameMatch) {
+        const structName = nameMatch[1];
+        // Collect struct content until closing brace
+        let structContent = line;
+        let braceCount = openBraces - closeBraces;
+
+        while (braceCount > 0 && i < lines.length) {
+          const nextLine = lines[i].trim();
+          structContent += "\n" + nextLine;
+          braceCount +=
+            (nextLine.match(/\{/g) || []).length -
+            (nextLine.match(/\}/g) || []).length;
+          i++;
+        }
+
+        // Extract documentation for this struct from source
+        const structStart = sourceText.indexOf(`struct ${structName}`);
+        let notice = "";
+        if (structStart > 0) {
+          // Look backwards for /// documentation, but only in the reasonable range before this struct
+          let searchStart = Math.max(0, structStart - 300);
+          const beforeStruct = sourceText.substring(searchStart, structStart);
+
+          // Find documentation comments near the struct definition
+          const docMatches = [
+            ...beforeStruct.matchAll(/\/\/\/\s*@notice\s+([^\n]*)/g),
+          ];
+          if (docMatches.length > 0) {
+            // Use the last (closest) @notice found
+            notice = docMatches[docMatches.length - 1][1].trim();
+          }
+        }
+
+        // Parse struct fields
+        const braceContent = structContent.match(/\{([^}]+)\}/s)?.[1] || "";
+        const fields: StructField[] = [];
+
+        if (braceContent) {
+          // Get original source to extract comments properly
+          const enumStart = sourceText.indexOf(`struct ${structName}`);
+          const enumEnd = sourceText.indexOf("}", enumStart) + 1;
+          const structSource = sourceText.substring(enumStart, enumEnd);
+
+          // Split by semicolon to get individual field declarations
+          const fieldDecls = braceContent.split(";");
+          for (const decl of fieldDecls) {
+            // Remove leading comments (/// and /** style)
+            let cleaned = decl.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
+            cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
+
+            const trimmed = cleaned.trim();
+            if (!trimmed) {
+              continue;
+            }
+
+            // Match "type name" pattern
+            const fieldMatch = trimmed.match(/^(\w+(?:\[\])?)\s+(\w+)/);
+            if (fieldMatch) {
+              const fieldName = fieldMatch[2];
+
+              // Extract documentation for this field from source
+              let property = "";
+              // Look backwards from field name in structSource to find documentation
+              const fieldIndex = structSource.indexOf(fieldName);
+              if (fieldIndex > 0) {
+                const beforeField = structSource.substring(0, fieldIndex);
+                // Find the last /// comment before this field
+                const tripleSlashMatches = [
+                  ...beforeField.matchAll(
+                    /\/\/\/\s*(@custom:property\s+[^\n]*)/g,
+                  ),
+                ];
+                if (tripleSlashMatches.length > 0) {
+                  const lastMatch =
+                    tripleSlashMatches[tripleSlashMatches.length - 1];
+                  property = lastMatch[1]
+                    .replace("@custom:property", "")
+                    .trim();
+                }
+              }
+
+              fields.push({
+                name: fieldName,
+                type: fieldMatch[1],
+                property,
+              });
+            }
+          }
+        }
+
+        structs.push({
+          name: structName,
+          notice,
+          fields,
+        });
+      }
+
+      // Don't update contractDepth for file-level structs
+      continue;
+    }
+
+    // Detect enum start (only at file level)
+    if (contractDepth === 0 && line.match(/^enum\s+(\w+)\s*\{/)) {
+      const nameMatch = line.match(/^enum\s+(\w+)/);
+      if (nameMatch) {
+        const enumName = nameMatch[1];
+        // Collect enum content until closing brace
+        let enumContent = line;
+        let braceCount = openBraces - closeBraces;
+
+        while (braceCount > 0 && i < lines.length) {
+          const nextLine = lines[i].trim();
+          enumContent += "\n" + nextLine;
+          braceCount +=
+            (nextLine.match(/\{/g) || []).length -
+            (nextLine.match(/\}/g) || []).length;
+          i++;
+        }
+
+        // Extract documentation for this enum from source
+        const enumStart = sourceText.indexOf(`enum ${enumName}`);
+        let notice = "";
+        if (enumStart > 0) {
+          // Look backwards for /// documentation, but only in the reasonable range before this enum
+          let searchStart = Math.max(0, enumStart - 300);
+          const beforeEnum = sourceText.substring(searchStart, enumStart);
+
+          // Find documentation comments near the enum definition
+          const docMatches = [
+            ...beforeEnum.matchAll(/\/\/\/\s*@notice\s+([^\n]*)/g),
+          ];
+          if (docMatches.length > 0) {
+            // Use the last (closest) @notice found
+            notice = docMatches[docMatches.length - 1][1].trim();
+          }
+        }
+
+        // Parse enum values
+        const values: EnumValue[] = [];
+        // Extract just the content between the braces
+        const braceContent = enumContent.match(/\{([^}]+)\}/s)?.[1] || "";
+        if (braceContent) {
+          // Get original source to extract comments properly
+          const enumSourceStart = sourceText.indexOf(`enum ${enumName}`);
+          const enumSourceEnd = sourceText.indexOf("}", enumSourceStart) + 1;
+          const enumSource = sourceText.substring(
+            enumSourceStart,
+            enumSourceEnd,
+          );
+
+          // Split by comma and clean up, removing comments
+          const valueLines = braceContent.split(",");
+          for (const line of valueLines) {
+            // Remove leading comments (/// and /** style)
+            let cleaned = line.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
+            cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
+
+            const trimmed = cleaned.trim();
+            // Skip empty lines
+            if (!trimmed) {
+              continue;
+            }
+
+            const valueName = trimmed.split(/[\s;]/)[0]; // Get first word
+            if (valueName && valueName !== enumName) {
+              // Extract documentation for this value from source
+              let variant = "";
+              // Look backwards from value name in enumSource to find documentation
+              const valueIndex = enumSource.indexOf(valueName);
+              if (valueIndex > 0) {
+                const beforeValue = enumSource.substring(0, valueIndex);
+                // Find the last /// comment before this value
+                const tripleSlashMatches = [
+                  ...beforeValue.matchAll(
+                    /\/\/\/\s*(@custom:variant\s+[^\n]*)/g,
+                  ),
+                ];
+                if (tripleSlashMatches.length > 0) {
+                  const lastMatch =
+                    tripleSlashMatches[tripleSlashMatches.length - 1];
+                  variant = lastMatch[1].replace("@custom:variant", "").trim();
+                }
+              }
+
+              values.push({
+                name: valueName,
+                variant,
+              });
+            }
+          }
+        }
+
+        enums.push({
+          name: enumName,
+          notice,
+          values,
+        });
+      }
+
+      // Don't update contractDepth for file-level enums
+      continue;
+    }
+
+    // Track contract/interface/library depth
+    if (
+      line.match(/^contract\s+\w+/) ||
+      line.match(/^interface\s+\w+/) ||
+      line.match(/^library\s+\w+/)
+    ) {
+      contractDepth += openBraces - closeBraces;
+      continue;
+    }
+
+    // Update depth for other lines
+    contractDepth += openBraces - closeBraces;
+  }
+
+  return { structs, enums };
+}
+
+/**
+ * Extract file-level functions from source code.
+ * File-level = defined outside any contract
+ */
+function extractFileFunctionsFromSource(sourceText: string): FunctionDoc[] {
+  const functions: FunctionDoc[] = [];
+  const lines = sourceText.split("\n");
+
+  let contractDepth = 0;
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    i++;
+
+    // Skip empty lines and comments
+    if (!line || line.startsWith("//") || line.startsWith("*")) {
+      continue;
+    }
+
+    const openBraces = (line.match(/\{/g) || []).length;
+    const closeBraces = (line.match(/\}/g) || []).length;
+
+    // Detect function at file level
+    if (contractDepth === 0 && line.match(/^function\s+\w+/)) {
+      // Find the full function signature (might span multiple lines)
+      let signature = line;
+      while (!signature.includes("{") && i < lines.length) {
+        signature += " " + lines[i].trim();
+        i++;
+      }
+
+      // Extract just the signature part (before {)
+      const sigPart = signature.split("{")[0].trim();
+
+      // Extract documentation for this function from source
+      const funcStart = sourceText.indexOf(sigPart);
+      let notice = "";
+      if (funcStart > 0) {
+        // Look backwards for /// documentation, but only in the reasonable range before this function
+        let searchStart = Math.max(0, funcStart - 300);
+        const beforeFunc = sourceText.substring(searchStart, funcStart);
+
+        // Find documentation comments near the function definition
+        const docMatches = [
+          ...beforeFunc.matchAll(/\/\/\/\s*@notice\s+([^\n]*)/g),
+        ];
+        if (docMatches.length > 0) {
+          // Use the last (closest) @notice found
+          notice = docMatches[docMatches.length - 1][1].trim();
+        }
+      }
+
+      functions.push({
+        signature: sigPart,
+        notice,
+      });
+
+      // Count braces for the function body
+      let braceCount = openBraces - closeBraces;
+      if (line.includes("{")) {
+        braceCount = 0; // Reset, we already counted on the signature line
+        let sigBraces =
+          (signature.match(/\{/g) || []).length -
+          (signature.match(/\}/g) || []).length;
+        braceCount = sigBraces;
+      }
+
+      // Skip to end of function
+      while (braceCount > 0 && i < lines.length) {
+        const nextLine = lines[i].trim();
+        braceCount +=
+          (nextLine.match(/\{/g) || []).length -
+          (nextLine.match(/\}/g) || []).length;
+        i++;
+      }
+    } else {
+      // Track contract/interface/library depth
+      if (
+        line.match(/^contract\s+\w+/) ||
+        line.match(/^interface\s+\w+/) ||
+        line.match(/^library\s+\w+/)
+      ) {
+        contractDepth += openBraces - closeBraces;
+      } else {
+        // Update depth for other lines
+        contractDepth += openBraces - closeBraces;
+      }
+    }
+  }
+
+  return functions;
+}
+
 export function extractSourceLevelDetails(
   sourceAst: AstNode | undefined,
   sourceText: string,
 ): SourceLevelDetails {
   const nodes = sourceAst?.nodes ?? [];
 
-  const structs = nodes
+  let structs = nodes
     .filter((node) => node.nodeType === "StructDefinition")
     .map((node) => ({
       name: node.name ?? "<anonymous>",
@@ -291,7 +640,7 @@ export function extractSourceLevelDetails(
       })),
     }));
 
-  const enums = nodes
+  let enums = nodes
     .filter((node) => node.nodeType === "EnumDefinition")
     .map((node) => ({
       name: node.name ?? "<anonymous>",
@@ -302,13 +651,29 @@ export function extractSourceLevelDetails(
       })),
     }));
 
-  const freeFunctions = nodes
+  // Always parse file-level structs/enums from source since compiler AST is incomplete
+  const sourceParsed = extractFileTypesFromSource(sourceText);
+
+  // Prefer source-parsed values if we have them
+  if (sourceParsed.structs.length > 0) {
+    structs = sourceParsed.structs;
+  }
+  if (sourceParsed.enums.length > 0) {
+    enums = sourceParsed.enums;
+  }
+
+  let freeFunctions = nodes
     .filter((node) => node.nodeType === "FunctionDefinition")
     .filter((node) => node.implemented !== false)
     .map((node) => ({
       signature: renderAstFunctionSignature(node),
       notice: getNoticeFromDocText(node.documentation),
     }));
+
+  // If AST didn't provide free functions, try parsing from source
+  if (freeFunctions.length === 0) {
+    freeFunctions = extractFileFunctionsFromSource(sourceText);
+  }
 
   return {
     structs,
@@ -321,9 +686,118 @@ export function extractSourceLevelDetails(
 // Contract-Level Extraction
 // =============================================================================
 
+/**
+ * Extract @custom:formatTag from contract's leading comments
+ */
+export function extractFormatTagForContract(
+  sourceText: string,
+  sourceAst: AstNode | undefined,
+  contractName: string,
+): string {
+  const contractNodes = sourceAst?.nodes ?? [];
+  const contractNode = contractNodes.find(
+    (node) =>
+      node.nodeType === "ContractDefinition" && node.name === contractName,
+  );
+
+  if (!contractNode || !contractNode.src) {
+    return "";
+  }
+
+  return extractCustomTagForNode(sourceText, contractNode, "formatTag");
+}
+
+/**
+ * Extract contract-level structs and enums from source code
+ * (Not available in compiler AST, so parse from source)
+ */
+function extractContractTypesFromSource(
+  sourceText: string,
+  contractName: string,
+): { structs: StructDoc[]; enums: EnumDoc[] } {
+  const structs: StructDoc[] = [];
+  const enums: EnumDoc[] = [];
+
+  // Find contract block
+  const contractRegex = new RegExp(
+    `contract\\s+${contractName}\\s*(?:is\\s+[^{]+)?\\{([^{}]*(?:\\{[^{}]*\\}[^{}]*)*)\\}`,
+    "s",
+  );
+  const contractMatch = sourceText.match(contractRegex);
+  if (!contractMatch) {
+    return { structs, enums };
+  }
+
+  const contractBody = contractMatch[1];
+
+  // Extract structs
+  const structRegex = /struct\s+(\w+)\s*\{([^}]+)\}/g;
+  let structMatch;
+  while ((structMatch = structRegex.exec(contractBody)) !== null) {
+    const structName = structMatch[1];
+    const fieldsText = structMatch[2];
+
+    const fields: StructField[] = [];
+    const fieldLines = fieldsText.split(";").filter((line) => line.trim());
+    for (const line of fieldLines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Parse "type name" format
+      const parts = trimmed.split(/\s+/);
+      if (parts.length >= 2) {
+        const name = parts[parts.length - 1];
+        const type = parts.slice(0, -1).join(" ");
+        fields.push({
+          name,
+          type,
+          property: "",
+        });
+      }
+    }
+
+    structs.push({
+      name: structName,
+      notice: "",
+      fields,
+    });
+  }
+
+  // Extract enums
+  const enumRegex = /enum\s+(\w+)\s*\{([^}]+)\}/g;
+  let enumMatch;
+  while ((enumMatch = enumRegex.exec(contractBody)) !== null) {
+    const enumName = enumMatch[1];
+    const valuesText = enumMatch[2];
+
+    const values: EnumValue[] = [];
+    const valueLines = valuesText
+      .split(",")
+      .map((v) => v.trim())
+      .filter((v) => v);
+    for (const line of valueLines) {
+      if (line) {
+        values.push({
+          name: line,
+          variant: "",
+        });
+      }
+    }
+
+    enums.push({
+      name: enumName,
+      notice: "",
+      values,
+    });
+  }
+
+  return { structs, enums };
+}
+
 export function extractAstContractDetails(
   sourceAst: AstNode | undefined,
   contractName: string,
+  sourceText = "",
 ): ContractAstDetails {
   const contractNodes = sourceAst?.nodes ?? [];
   const contractNode = contractNodes.find(
@@ -332,7 +806,7 @@ export function extractAstContractDetails(
   );
 
   if (!contractNode) {
-    return { contractKind: "contract", functions: [] };
+    return { contractKind: "contract", functions: [], structs: [], enums: [] };
   }
 
   const functionNodes = (contractNode.nodes ?? []).filter((node) => {
@@ -344,11 +818,53 @@ export function extractAstContractDetails(
     return node.implemented !== false;
   });
 
+  // Try to get structs and enums from AST first, fall back to source parsing
+  let structNodes = (contractNode.nodes ?? []).filter(
+    (node) => node.nodeType === "StructDefinition",
+  );
+  let enumNodes = (contractNode.nodes ?? []).filter(
+    (node) => node.nodeType === "EnumDefinition",
+  );
+
+  // If AST doesn't have them, parse from source
+  if (structNodes.length === 0 && enumNodes.length === 0 && sourceText) {
+    const sourceParsed = extractContractTypesFromSource(
+      sourceText,
+      contractName,
+    );
+    return {
+      contractKind: contractNode.contractKind ?? "contract",
+      functions: functionNodes.map((fn) => ({
+        signature: renderAstFunctionSignature(fn),
+        notice: getNoticeFromDocText(fn.documentation),
+      })),
+      structs: sourceParsed.structs,
+      enums: sourceParsed.enums,
+    };
+  }
+
   return {
     contractKind: contractNode.contractKind ?? "contract",
     functions: functionNodes.map((fn) => ({
       signature: renderAstFunctionSignature(fn),
       notice: getNoticeFromDocText(fn.documentation),
+    })),
+    structs: structNodes.map((struct) => ({
+      name: struct.name ?? "",
+      notice: getNoticeFromDocText(struct.documentation),
+      fields: (struct.members ?? []).map((member) => ({
+        name: member.name ?? "",
+        type: member.typeDescriptions?.typeString ?? "unknown",
+        property: getNoticeFromDocText(member.documentation),
+      })),
+    })),
+    enums: enumNodes.map((enumNode) => ({
+      name: enumNode.name ?? "",
+      notice: getNoticeFromDocText(enumNode.documentation),
+      values: (enumNode.members ?? []).map((member) => ({
+        name: member.name ?? "",
+        variant: getNoticeFromDocText(member.documentation),
+      })),
     })),
   };
 }
@@ -422,20 +938,32 @@ export function readBuildInfoContracts(
         extractSourceLevelDetails(sourceAst, sourceText);
 
       for (const [contractName, data] of Object.entries(contracts)) {
-        const astDetails = extractAstContractDetails(sourceAst, contractName);
+        const astDetails = extractAstContractDetails(
+          sourceAst,
+          contractName,
+          sourceText,
+        );
         const license = extractLicenseFromSource(sourceText);
+        const formatTag = extractFormatTagForContract(
+          sourceText,
+          sourceAst,
+          contractName,
+        );
         docs.push({
           sourcePath: normalizedSourcePath,
           contractName,
           contractKind: astDetails.contractKind,
           abi: data.abi ?? [],
           astFunctions: astDetails.functions,
+          astStructs: astDetails.structs,
+          astEnums: astDetails.enums,
           sourceStructs: sourceDetails.structs,
           sourceEnums: sourceDetails.enums,
           sourceFreeFunctions: sourceDetails.freeFunctions,
           notice: data.userdoc?.notice ?? "",
           details: data.devdoc?.details ?? "",
           license,
+          formatTag: formatTag || undefined,
         });
       }
     }
@@ -479,6 +1007,8 @@ export function readBuildInfoContracts(
       contractKind: "source",
       abi: [],
       astFunctions: [],
+      astStructs: [],
+      astEnums: [],
       sourceStructs: sourceDetails.structs,
       sourceEnums: sourceDetails.enums,
       sourceFreeFunctions: sourceDetails.freeFunctions,

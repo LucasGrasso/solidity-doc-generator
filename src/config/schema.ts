@@ -29,11 +29,6 @@ export type DocgenConfig = {
   outDir?: string;
 
   /**
-   * Template directory for overrides (default: templates)
-   */
-  templateDir?: string;
-
-  /**
    * Exclude patterns using glob syntax
    */
   exclude?: string[];
@@ -43,6 +38,12 @@ export type DocgenConfig = {
    * @example ["contract", "interface", "library"]
    */
   contractKinds?: string[];
+
+  /**
+   * Format tags to include (filters by @custom:formatTag)
+   * @example ["erc20", "erc721"]
+   */
+  formatTags?: string[];
 
   /**
    * Custom properties to extract from docstrings
@@ -113,6 +114,18 @@ export type DocgenConfig = {
    * @default "Guides"
    */
   customDocsSidebarLabel?: string;
+
+  /**
+   * Directory containing custom Handlebars templates for rendering
+   * Can include contract.md.hbs for markdown rendering
+   */
+  templateDir?: string;
+
+  /**
+   * Enable markdown template rendering (uses contract.md.hbs if available)
+   * @default false
+   */
+  useMarkdownTemplate?: boolean;
 };
 
 /**
@@ -160,6 +173,8 @@ export function normalizeConfig(
     | "indexTemplate"
     | "customDocsDir"
     | "customDocsSidebarLabel"
+    | "templateDir"
+    | "useMarkdownTemplate"
   > & {
     customProperties: Record<string, (doc: any) => string | undefined>;
     plugins: any[];
@@ -173,6 +188,8 @@ export function normalizeConfig(
     indexTemplate: string | null;
     customDocsDir: string | null;
     customDocsSidebarLabel: string;
+    templateDir: string;
+    useMarkdownTemplate: boolean;
   }
 > {
   return {
@@ -196,6 +213,7 @@ export function normalizeConfig(
       "library",
       "source",
     ],
+    formatTags: config.formatTags ?? [],
     sourceDir: config.sourceDir ?? "contracts",
     customProperties: config.customProperties ?? {},
     plugins: config.plugins ?? [],
@@ -219,5 +237,6 @@ export function normalizeConfig(
         )
       : null,
     customDocsSidebarLabel: config.customDocsSidebarLabel ?? "Guides",
+    useMarkdownTemplate: config.useMarkdownTemplate ?? false,
   };
 }

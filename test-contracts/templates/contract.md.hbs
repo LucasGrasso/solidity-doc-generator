@@ -1,0 +1,248 @@
+---
+title: "{{filenameOnly sourcePath}}"
+description: "Documentation"
+sourceFile: "{{sourcePath}}"
+---
+
+```solidity
+import "{{sourcePath}}";
+```
+
+{{#each contracts}}
+- <a href="#{{slugify this.doc.contractName}}"><code>{{this.doc.contractName}}</code></a> ({{this.doc.contractKind}})
+{{/each}}
+
+
+{{#if sourceFreeFunctions.length}}
+
+## File-Level Functions
+
+{{#each sourceFreeFunctions}}
+- <a href="#{{slugifyFunctionName this.signature}}"><code>{{this.signature}}</code></a>
+
+{{/each}}
+
+{{#each sourceFreeFunctions}}
+<a id="{{slugifyFunctionName this.signature}}"></a>
+
+### {{functionName this.signature}}
+
+``` solidity
+{{this.signature}}
+```
+
+{{#if this.notice}}
+{{this.notice}}
+{{/if}}
+
+{{/each}}
+
+{{/if}}
+
+{{#if sourceStructs.length}}
+
+## File-Level Structs
+
+{{#each sourceStructs}}
+- <a href="#{{slugify this.name}}"><code>{{this.name}}</code></a>
+
+{{/each}}
+
+{{#each sourceStructs}}
+<a id="{{slugify this.name}}"></a>
+
+### {{this.name}}
+
+```solidity
+struct {{this.name}}
+```
+
+{{#if this.notice}}
+{{this.notice}}
+
+{{/if}}
+
+{{#if this.fields.length}}
+
+| Field | Type | Description |
+|-------|------|-------------|
+{{#each this.fields}}
+| `{{this.name}}` | `{{this.type}}` | {{#if this.property}}{{this.property}}{{else}}-{{/if}} |
+{{/each}}
+
+{{/if}}
+
+{{/each}}
+
+{{/if}}
+
+{{#if sourceEnums.length}}
+
+## File-Level Enums
+
+{{#each sourceEnums}}
+- <a href="#{{slugify this.name}}"><code>{{this.name}}</code></a>
+
+{{/each}}
+
+{{#each sourceEnums}}
+<a id="{{slugify this.name}}"></a>
+
+### {{this.name}}
+
+```solidity
+enum {{this.name}}
+```
+
+{{#if this.notice}}
+{{this.notice}}
+
+{{/if}}
+
+{{#if this.values.length}}
+
+| Variant | Description |
+|---------|-------------|
+{{#each this.values}}
+| `{{this.name}}` | {{#if this.variant}}{{this.variant}}{{else}}-{{/if}} |
+{{/each}}
+
+{{/if}}
+
+{{/each}}
+
+{{/if}}
+
+{{#each contracts}}
+
+---
+
+## {{this.doc.contractName}}
+
+**Kind**: `{{this.doc.contractKind}}`
+
+{{#if this.doc.notice}}
+
+### Overview
+
+{{this.doc.notice}}
+
+{{/if}}
+
+{{#if this.doc.details}}
+
+### Details
+
+{{this.doc.details}}
+
+{{/if}}
+
+{{#if this.doc.astFunctions.length}}{{#if this.doc.astStructs.length}}{{#if this.doc.astEnums.length}}
+
+### Members
+
+{{/if}}{{/if}}{{/if}}
+
+{{#if this.doc.astFunctions.length}}
+
+### Functions
+
+{{#each this.doc.astFunctions}}
+- <a href="#{{slugifyFunctionName this.signature}}"><code>{{this.signature}}</code></a>
+
+{{/each}}
+
+{{#each this.doc.astFunctions}}
+<a id="{{slugifyFunctionName this.signature}}"></a>
+
+#### {{functionName this.signature}}
+
+``` solidity
+{{this.signature}}
+```
+
+{{#if this.visibility}}**Visibility**: `{{this.visibility}}`{{/if}}
+
+{{#if this.notice}}
+{{this.notice}}
+{{/if}}
+
+{{/each}}
+
+{{/if}}
+
+{{#if this.doc.astStructs.length}}
+
+### Structs
+
+{{#each this.doc.astStructs}}
+- <a href="#{{slugify this.name}}"><code>{{this.name}}</code></a>
+
+{{/each}}
+
+{{#each this.doc.astStructs}}
+<a id="{{slugify this.name}}"></a>
+
+#### {{this.name}}
+
+```solidity
+struct {{this.name}}
+```
+
+{{#if this.notice}}
+{{this.notice}}
+
+{{/if}}
+
+{{#if this.fields.length}}
+
+| Field | Type | Description |
+|-------|------|-------------|
+{{#each this.fields}}
+| `{{this.name}}` | `{{this.type}}` | {{#if this.property}}{{this.property}}{{else}}-{{/if}} |
+{{/each}}
+
+{{/if}}
+
+{{/each}}
+
+{{/if}}
+
+{{#if this.doc.astEnums.length}}
+
+### Enums
+
+{{#each this.doc.astEnums}}
+- <a href="#{{slugify this.name}}"><code>{{this.name}}</code></a>
+
+{{/each}}
+
+{{#each this.doc.astEnums}}
+<a id="{{slugify this.name}}"></a>
+
+#### {{this.name}}
+
+```solidity
+enum {{this.name}}
+```
+
+{{#if this.notice}}
+{{this.notice}}
+
+{{/if}}
+
+{{#if this.values.length}}
+
+| Variant | Description |
+|---------|-------------|
+{{#each this.values}}
+| `{{this.name}}` | {{#if this.variant}}{{this.variant}}{{else}}-{{/if}} |
+{{/each}}
+
+{{/if}}
+
+{{/each}}
+
+{{/if}}
+
+{{/each}}

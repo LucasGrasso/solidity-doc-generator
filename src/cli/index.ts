@@ -50,6 +50,9 @@ async function main(): Promise<void> {
     } else if (args[i] === "--custom-docs-label" && args[i + 1]) {
       overrides.customDocsSidebarLabel = args[i + 1];
       i++;
+    } else if (args[i] === "--format-tags" && args[i + 1]) {
+      overrides.formatTags = args[i + 1].split(",").map((t) => t.trim());
+      i++;
     } else if (args[i] === "--watch") {
       watch = true;
     } else if (args[i] === "--help" || args[i] === "-h") {
@@ -116,6 +119,7 @@ OPTIONS
   --source-dir <dir>           Source directory for contracts (default: contracts)
   --output-dir <dir>           Output directory (overrides config)
   --root-dir <dir>             Project root directory (overrides config)
+  --format-tags <tags>         Filter by format tags (comma-separated, e.g. erc20,erc721)
   --generate-vitepress-sidebar Auto-generate VitePress config from docs
   --site-title <title>         Site title for VitePress config
   --site-description <desc>    Site description for VitePress config

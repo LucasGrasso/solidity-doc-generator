@@ -209,7 +209,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Created with solidity-doc-generator',
+      message: 'Created with <a href="https://github.com/LucasGrasso/solidity-doc-generator">solidity-doc-generator</a>',
       copyright: ''
     },
 

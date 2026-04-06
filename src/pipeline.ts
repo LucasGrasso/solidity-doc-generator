@@ -17,6 +17,8 @@ import {
   buildFilteredItems,
   MarkdownRenderer,
   type FilterOptions,
+  type FilteredItem,
+  type RenderedFile,
 } from "./core/index.js";
 import {
   generateSidebarFromDir,
@@ -30,6 +32,7 @@ export interface PipelineConfig {
   sourceDir?: string;
   exclude?: string[];
   contractKinds?: string[];
+  formatTags?: string[];
   customProperties?: Record<string, (doc: any) => string | undefined>;
   plugins?: any[];
   frontmatter?: Record<string, unknown>;
@@ -42,6 +45,8 @@ export interface PipelineConfig {
   indexTemplate?: string | null;
   customDocsDir?: string | null;
   customDocsSidebarLabel?: string;
+  templateDir?: string | null;
+  useMarkdownTemplate?: boolean;
 }
 
 export async function runPipeline(config: PipelineConfig): Promise<void> {
@@ -65,18 +70,46 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   const filterOptions: FilterOptions = {
     exclude: config.exclude,
     contractKinds: config.contractKinds,
+    formatTags: config.formatTags,
   };
   const filteredItems = buildFilteredItems(contracts, filterOptions);
   console.log(`   ${filteredItems.length} contract(s) after filtering`);
 
   // Phase 3: Render
-  console.log("✨ Rendering markdown...");
-  const renderer = new MarkdownRenderer({
-    outputDir: "",
-    frontmatterDefaults: config.frontmatter,
-  });
-  const files = await renderer.render(filteredItems);
-  console.log(`   Generated ${files.length} file(s)`);
+  let files;
+  const markdownTemplatePath =
+    config.useMarkdownTemplate && config.templateDir
+      ? join(config.templateDir, "contract.md.hbs")
+      : null;
+
+  if (markdownTemplatePath && existsSync(markdownTemplatePath)) {
+    console.log("🎨 Rendering from markdown template...");
+    files = await renderMarkdownFromTemplate(
+      filteredItems,
+      markdownTemplatePath,
+      config.repository || "",
+    );
+    console.log(`   Generated ${files.length} file(s)`);
+
+    // Generate default index if not in config
+    if (!config.indexTemplate) {
+      const indexFile = generateDefaultIndex(
+        filteredItems,
+        config.siteTitle || "Documentation",
+      );
+      if (indexFile) {
+        files.push(indexFile);
+      }
+    }
+  } else {
+    console.log("✨ Rendering markdown...");
+    const renderer = new MarkdownRenderer({
+      outputDir: "",
+      frontmatterDefaults: config.frontmatter,
+    });
+    files = await renderer.render(filteredItems);
+    console.log(`   Generated ${files.length} file(s)`);
+  }
 
   // Phase 4: Write
   console.log("💾 Writing files...");
@@ -166,4 +199,139 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   }
 
   console.log("✅ Done!");
+}
+
+/**
+ * Render contracts using markdown Handlebars template
+ */
+async function renderMarkdownFromTemplate(
+  items: FilteredItem[],
+  templatePath: string,
+  repository: string,
+): Promise<RenderedFile[]> {
+  const templateContent = readFileSync(templatePath, "utf8");
+
+  // Register custom helper to extract function name and parameters from signature
+  Handlebars.registerHelper("functionName", (signature: string) => {
+    if (!signature) return "";
+    // Extract function name and parameters like "name(params)"
+    // From "function name(params) visibility returns (type)"
+    const match = signature.match(/function\s+(\w+\([^)]*\))/);
+    return match ? match[1] : signature;
+  });
+
+  // Register custom helper to create URL-safe slug from function signature
+  Handlebars.registerHelper("slugifyFunctionName", (signature: string) => {
+    if (!signature) return "";
+    // Extract just the function name from signature
+    // From "function name(params) visibility returns (type)"
+    const match = signature.match(/function\s+(\w+)\s*\(/);
+    return match ? match[1].toLowerCase() : "";
+  });
+
+  // Register custom helper to slugify struct/enum names
+  Handlebars.registerHelper("slugify", (name: string) => {
+    if (!name) return "";
+    return name.toLowerCase().replace(/\s+/g, "-");
+  });
+
+  // Register custom helper to extract filename from source path
+  Handlebars.registerHelper("filenameOnly", (sourcePath: string) => {
+    if (!sourcePath) return "";
+    // Extract just the filename without extension from path like "contracts/AB.sol"
+    const match = sourcePath.match(/([^/\\]+)\.sol$/);
+    return match ? match[1] : sourcePath;
+  });
+
+  const template = Handlebars.compile(templateContent);
+
+  // Group items by source file to render one doc per contract
+  const itemsBySource = new Map<string, FilteredItem[]>();
+  for (const item of items) {
+    const sourcePath = item.doc.sourcePath;
+    if (!itemsBySource.has(sourcePath)) {
+      itemsBySource.set(sourcePath, []);
+    }
+    itemsBySource.get(sourcePath)!.push(item);
+  }
+
+  const files: RenderedFile[] = [];
+
+  for (const [sourcePath, sourceItems] of itemsBySource) {
+    // Prepare context for all contracts in this source file
+    const context = {
+      contracts: sourceItems.map((item) => ({
+        doc: item.doc,
+        item,
+        slug: item.slug,
+      })),
+      sourcePath,
+      folder:
+        sourceItems[0].folder && sourceItems[0].folder !== "(root)"
+          ? sourceItems[0].folder
+          : null,
+      repository,
+      // Add file-level items (same for all contracts in the file)
+      sourceFreeFunctions: sourceItems[0].doc.sourceFreeFunctions,
+      sourceStructs: sourceItems[0].doc.sourceStructs,
+      sourceEnums: sourceItems[0].doc.sourceEnums,
+    };
+
+    // Render template
+    const content = template(context);
+
+    // Determine file path based on first item's slug
+    const firstItem = sourceItems[0];
+    let filePath: string;
+    if (firstItem.folder && firstItem.folder !== "(root)") {
+      filePath = `${firstItem.folder}/${firstItem.slug}.md`;
+    } else {
+      filePath = `${firstItem.slug}.md`;
+    }
+
+    files.push({
+      filePath,
+      content,
+    });
+  }
+
+  return files;
+}
+
+/**
+ * Generate a default index page with a simple table of contents
+ */
+function generateDefaultIndex(
+  items: FilteredItem[],
+  title: string,
+): RenderedFile | null {
+  const lines: string[] = [
+    `# ${title}`,
+    "",
+    "| Contract | Source |",
+    "| --- | --- |",
+  ];
+
+  // Sort items by name
+  const sortedItems = [...items].sort((a, b) =>
+    a.doc.contractName.localeCompare(b.doc.contractName),
+  );
+
+  for (const item of sortedItems) {
+    const contractPath =
+      item.folder && item.folder !== "(root)"
+        ? `/${item.folder}/${item.slug}`
+        : `/${item.slug}`;
+
+    lines.push(
+      `| [${item.doc.contractName}](${contractPath}) | ${item.doc.sourcePath} |`,
+    );
+  }
+
+  const content = lines.join("\n");
+
+  return {
+    filePath: "index.md",
+    content,
+  };
 }

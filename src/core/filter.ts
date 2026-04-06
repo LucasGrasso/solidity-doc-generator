@@ -51,6 +51,12 @@ export type FilterOptions = {
   contractKinds?: string[];
 
   /**
+   * Only include contracts with specified format tags
+   * @example ["erc20", "erc721"]
+   */
+  formatTags?: string[];
+
+  /**
    * Custom sorting function
    */
   sort?: (a: ContractDoc, b: ContractDoc) => number;
@@ -108,6 +114,15 @@ export function filterContracts(
       options.contractKinds &&
       options.contractKinds.length > 0 &&
       !options.contractKinds.includes(doc.contractKind)
+    ) {
+      return false;
+    }
+
+    // Format tag check
+    if (
+      options.formatTags &&
+      options.formatTags.length > 0 &&
+      (!doc.formatTag || !options.formatTags.includes(doc.formatTag))
     ) {
       return false;
     }

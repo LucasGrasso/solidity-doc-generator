@@ -253,7 +253,9 @@ export class MarkdownRenderer implements Renderer {
             sections.push(`### Functions`);
             sections.push("");
             for (const fn of functions) {
-              sections.push(`- \`${escapeCodeContent(renderAbiSignature(fn))}\``);
+              sections.push(
+                `- \`${escapeCodeContent(renderAbiSignature(fn))}\``,
+              );
             }
             sections.push("");
           }
@@ -262,7 +264,9 @@ export class MarkdownRenderer implements Renderer {
             sections.push(`### Events`);
             sections.push("");
             for (const evt of events) {
-              sections.push(`- \`${escapeCodeContent(renderAbiSignature(evt))}\``);
+              sections.push(
+                `- \`${escapeCodeContent(renderAbiSignature(evt))}\``,
+              );
             }
             sections.push("");
           }
@@ -271,7 +275,9 @@ export class MarkdownRenderer implements Renderer {
             sections.push(`### Errors`);
             sections.push("");
             for (const err of errors) {
-              sections.push(`- \`${escapeCodeContent(renderAbiSignature(err))}\``);
+              sections.push(
+                `- \`${escapeCodeContent(renderAbiSignature(err))}\``,
+              );
             }
             sections.push("");
           }
@@ -293,7 +299,57 @@ export class MarkdownRenderer implements Renderer {
         sections.push("");
       }
 
-      // Structs
+      // Contract-level Structs (from AST)
+      if (doc.astStructs.length > 0) {
+        sections.push(`${titleLevel}# Structs`);
+        sections.push("");
+        for (const struct of doc.astStructs) {
+          sections.push(`### \`struct ${struct.name}\``);
+          sections.push("");
+          if (struct.notice) {
+            sections.push(`${struct.notice}`);
+            sections.push("");
+          }
+          if (struct.fields.length > 0) {
+            sections.push("| Field | Type | Description |");
+            sections.push("|-------|------|-------------|");
+            for (const field of struct.fields) {
+              const desc = field.property
+                ? escapeMarkdown(field.property)
+                : "-";
+              sections.push(
+                `| \`${escapeCodeContent(field.name)}\` | \`${escapeCodeContent(field.type)}\` | ${desc} |`,
+              );
+            }
+          }
+          sections.push("");
+        }
+      }
+
+      // Contract-level Enums (from AST)
+      if (doc.astEnums.length > 0) {
+        sections.push(`${titleLevel}# Enums`);
+        sections.push("");
+        for (const enumDoc of doc.astEnums) {
+          sections.push(`### \`enum ${enumDoc.name}\``);
+          sections.push("");
+          if (enumDoc.notice) {
+            sections.push(`${enumDoc.notice}`);
+            sections.push("");
+          }
+          if (enumDoc.values.length > 0) {
+            sections.push("| Variant | Description |");
+            sections.push("|---------|-------------|");
+            for (const val of enumDoc.values) {
+              const desc = val.variant ? escapeMarkdown(val.variant) : "-";
+              sections.push(`| \`${escapeCodeContent(val.name)}\` | ${desc} |`);
+            }
+          }
+          sections.push("");
+        }
+      }
+
+      // File-level Structs
       if (doc.sourceStructs.length > 0) {
         sections.push(`${titleLevel}# Structs`);
         sections.push("");

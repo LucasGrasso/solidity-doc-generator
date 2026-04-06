@@ -91,6 +91,8 @@ export type SourceLevelDetails = {
 export type ContractAstDetails = {
   contractKind: string;
   functions: FunctionDoc[];
+  structs: StructDoc[];
+  enums: EnumDoc[];
 };
 
 /**
@@ -103,12 +105,15 @@ export type ContractDoc = {
   contractKind: string;
   abi: AbiItem[];
   astFunctions: FunctionDoc[];
+  astStructs: StructDoc[];
+  astEnums: EnumDoc[];
   sourceStructs: StructDoc[];
   sourceEnums: EnumDoc[];
   sourceFreeFunctions: FunctionDoc[];
   notice: string;
   details: string;
   license?: string;
+  formatTag?: string;
 };
 
 // =============================================================================
