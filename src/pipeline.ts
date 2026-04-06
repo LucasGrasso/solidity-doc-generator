@@ -42,6 +42,8 @@ export interface PipelineConfig {
   indexTemplate?: string | null;
   customDocsDir?: string | null;
   customDocsSidebarLabel?: string;
+  htmlTemplateDir?: string | null;
+  renderHtml?: boolean;
 }
 
 export async function runPipeline(config: PipelineConfig): Promise<void> {
@@ -69,14 +71,48 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   const filteredItems = buildFilteredItems(contracts, filterOptions);
   console.log(`   ${filteredItems.length} contract(s) after filtering`);
 
-  // Phase 3: Render
-  console.log("✨ Rendering markdown...");
-  const renderer = new MarkdownRenderer({
-    outputDir: "",
-    frontmatterDefaults: config.frontmatter,
-  });
-  const files = await renderer.render(filteredItems);
-  console.log(`   Generated ${files.length} file(s)`);
+  // Phase 3: Render (either Markdown or HTML, not both)
+  let files: any[] = [];
+
+  if (config.renderHtml && config.htmlTemplateDir) {
+    console.log("🎨 Rendering HTML from templates...");
+    try {
+      if (existsSync(config.htmlTemplateDir)) {
+        files = renderHtmlContracts(
+          filteredItems,
+          config.htmlTemplateDir,
+          config.repository || "https://github.com/your-org/your-repo",
+        );
+        console.log(`   Generated ${files.length} HTML file(s)`);
+      } else {
+        console.warn(`   ⚠ HTML template directory not found: ${config.htmlTemplateDir}`);
+        // Fall back to Markdown
+        const renderer = new MarkdownRenderer({
+          outputDir: "",
+          frontmatterDefaults: config.frontmatter,
+        });
+        files = await renderer.render(filteredItems);
+        console.log(`   Generated ${files.length} file(s)`);
+      }
+    } catch (error) {
+      console.warn("   ⚠ Could not render HTML templates, falling back to Markdown:", error);
+      // Fall back to Markdown
+      const renderer = new MarkdownRenderer({
+        outputDir: "",
+        frontmatterDefaults: config.frontmatter,
+      });
+      files = await renderer.render(filteredItems);
+      console.log(`   Generated ${files.length} file(s)`);
+    }
+  } else {
+    console.log("✨ Rendering markdown...");
+    const renderer = new MarkdownRenderer({
+      outputDir: "",
+      frontmatterDefaults: config.frontmatter,
+    });
+    files = await renderer.render(filteredItems);
+    console.log(`   Generated ${files.length} file(s)`);
+  }
 
   // Phase 4: Write
   console.log("💾 Writing files...");
@@ -166,4 +202,45 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   }
 
   console.log("✅ Done!");
+}
+
+/**
+ * Render HTML files from Handlebars templates for contracts
+ */
+function renderHtmlContracts(
+  filteredItems: any[],
+  htmlTemplateDir: string,
+  repository: string,
+): any[] {
+  const htmlFiles: any[] = [];
+
+  // Read contract.html.hbs if it exists
+  const contractTemplatePath = join(htmlTemplateDir, "contract.html.hbs");
+  if (!existsSync(contractTemplatePath)) {
+    return htmlFiles; // No HTML template found
+  }
+
+  const templateContent = readFileSync(contractTemplatePath, "utf8");
+  const template = Handlebars.compile(templateContent);
+
+  // Render each contract
+  for (const item of filteredItems) {
+    const context = {
+      item,
+      contract: item.doc,
+      slug: item.slug,
+      folder: item.folder,
+      repository,
+    };
+
+    const renderedHtml = template(context);
+    const htmlPath = join(item.folder || "", `${item.slug}.html`);
+
+    htmlFiles.push({
+      filePath: htmlPath,
+      content: renderedHtml,
+    });
+  }
+
+  return htmlFiles;
 }

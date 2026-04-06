@@ -113,6 +113,22 @@ export type DocgenConfig = {
    * @default "Guides"
    */
   customDocsSidebarLabel?: string;
+
+  /**
+   * Directory containing custom Handlebars HTML templates
+   * Place templates like contract.html.hbs or index.html.hbs here
+   * These will render as .html files instead of .md markdown files
+   * Template context includes all standard contract data
+   */
+  htmlTemplateDir?: string;
+
+  /**
+   * Enable HTML rendering from Handlebars templates
+   * If true, renders to .html files instead of .md files
+   * If false (default), renders Markdown as usual
+   * @default false
+   */
+  renderHtml?: boolean;
 };
 
 /**
@@ -160,6 +176,8 @@ export function normalizeConfig(
     | "indexTemplate"
     | "customDocsDir"
     | "customDocsSidebarLabel"
+    | "htmlTemplateDir"
+    | "renderHtml"
   > & {
     customProperties: Record<string, (doc: any) => string | undefined>;
     plugins: any[];
@@ -173,6 +191,8 @@ export function normalizeConfig(
     indexTemplate: string | null;
     customDocsDir: string | null;
     customDocsSidebarLabel: string;
+    htmlTemplateDir: string | null;
+    renderHtml: boolean;
   }
 > {
   return {
@@ -219,5 +239,12 @@ export function normalizeConfig(
         )
       : null,
     customDocsSidebarLabel: config.customDocsSidebarLabel ?? "Guides",
+    htmlTemplateDir: config.htmlTemplateDir
+      ? resolve(
+          config.rootDir ? resolve(config.rootDir) : cwd,
+          config.htmlTemplateDir,
+        )
+      : null,
+    renderHtml: config.renderHtml ?? false,
   };
 }
