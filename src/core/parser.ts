@@ -855,7 +855,7 @@ export function extractAstContractDetails(
       fields: (struct.members ?? []).map((member) => ({
         name: member.name ?? "",
         type: member.typeDescriptions?.typeString ?? "unknown",
-        property: getNoticeFromDocText(member.documentation),
+        property: extractCustomTagForNode(sourceText, member, "property"),
       })),
     })),
     enums: enumNodes.map((enumNode) => ({
@@ -863,7 +863,7 @@ export function extractAstContractDetails(
       notice: getNoticeFromDocText(enumNode.documentation),
       values: (enumNode.members ?? []).map((member) => ({
         name: member.name ?? "",
-        variant: getNoticeFromDocText(member.documentation),
+        variant: extractCustomTagForNode(sourceText, member, "variant"),
       })),
     })),
   };
