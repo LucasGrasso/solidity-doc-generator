@@ -370,22 +370,28 @@ function extractFileTypesFromSource(sourceText: string): {
 
               // Extract documentation for this field from source
               let property = "";
-              // Look backwards from field name in structSource to find documentation
-              const fieldIndex = structSource.indexOf(fieldName);
-              if (fieldIndex > 0) {
-                const beforeField = structSource.substring(0, fieldIndex);
-                // Find the last /// comment before this field
-                const tripleSlashMatches = [
-                  ...beforeField.matchAll(
-                    /\/\/\/\s*(@custom:property\s+[^\n]*)/g,
-                  ),
-                ];
-                if (tripleSlashMatches.length > 0) {
-                  const lastMatch =
-                    tripleSlashMatches[tripleSlashMatches.length - 1];
-                  property = lastMatch[1]
-                    .replace("@custom:property", "")
-                    .trim();
+              
+              // Split structSource by lines and find the line with this field
+              const structLines = structSource.split("\n");
+              for (let i = 0; i < structLines.length; i++) {
+                const structLine = structLines[i];
+                // Check if this line contains the field definition
+                if (structLine.match(new RegExp(`\\b${fieldName}\\b.*[;{]`))) {
+                  // Found the field definition, look backwards for documentation
+                  for (let j = i - 1; j >= 0; j--) {
+                    const docLine = structLines[j].trim();
+                    if (docLine.startsWith("///")) {
+                      const match = docLine.match(/@custom:property\s+(.+)$/);
+                      if (match) {
+                        property = match[1].trim();
+                        break;
+                      }
+                    } else if (docLine.length > 0 && !docLine.startsWith("struct")) {
+                      // Stop if we hit a non-comment, non-empty line
+                      break;
+                    }
+                  }
+                  break;
                 }
               }
 
@@ -458,14 +464,14 @@ function extractFileTypesFromSource(sourceText: string): {
             enumSourceEnd,
           );
 
-          // Split by comma and clean up, removing comments
-          const valueLines = braceContent.split(",");
-          for (const line of valueLines) {
-            // Remove leading comments (/// and /** style)
-            let cleaned = line.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
-            cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
+          // First, remove all comments from the enum content to avoid splitting on commas inside comments
+          let cleanedContent = braceContent.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
+          cleanedContent = cleanedContent.replace(/\/\*[\s\S]*?\*\//g, ""); // Remove /* */ comments
 
-            const trimmed = cleaned.trim();
+          // Now split by comma and clean up
+          const valueLines = cleanedContent.split(",");
+          for (const line of valueLines) {
+            const trimmed = line.trim();
             // Skip empty lines
             if (!trimmed) {
               continue;
@@ -475,20 +481,28 @@ function extractFileTypesFromSource(sourceText: string): {
             if (valueName && valueName !== enumName) {
               // Extract documentation for this value from source
               let variant = "";
-              // Look backwards from value name in enumSource to find documentation
-              const valueIndex = enumSource.indexOf(valueName);
-              if (valueIndex > 0) {
-                const beforeValue = enumSource.substring(0, valueIndex);
-                // Find the last /// comment before this value
-                const tripleSlashMatches = [
-                  ...beforeValue.matchAll(
-                    /\/\/\/\s*(@custom:variant\s+[^\n]*)/g,
-                  ),
-                ];
-                if (tripleSlashMatches.length > 0) {
-                  const lastMatch =
-                    tripleSlashMatches[tripleSlashMatches.length - 1];
-                  variant = lastMatch[1].replace("@custom:variant", "").trim();
+              
+              // Split enumSource by lines and find the line with just this variant name
+              const enumLines = enumSource.split("\n");
+              for (let i = 0; i < enumLines.length; i++) {
+                const enumLine = enumLines[i].trim();
+                // Check if this line is the variant definition (may have trailing comma)
+                if (enumLine.match(new RegExp(`^${valueName}\\s*,?\\s*$`))) {
+                  // Found the variant definition, look backwards for documentation
+                  for (let j = i - 1; j >= 0; j--) {
+                    const docLine = enumLines[j].trim();
+                    if (docLine.startsWith("///")) {
+                      const match = docLine.match(/@custom:variant\s+(.+)$/);
+                      if (match) {
+                        variant = match[1].trim();
+                        break;
+                      }
+                    } else if (docLine.length > 0) {
+                      // Stop if we hit a non-comment, non-empty line
+                      break;
+                    }
+                  }
+                  break;
                 }
               }
 
@@ -760,17 +774,28 @@ function extractContractTypesFromSource(
         if (structStart >= 0) {
           const structEnd = contractBody.indexOf("}", structStart) + 1;
           const structSource = contractBody.substring(structStart, structEnd);
-          // Look for the field name with word boundaries to avoid partial matches
-          const fieldRegex = new RegExp(`\\b${name}\\b`);
-          const fieldMatch = fieldRegex.exec(structSource);
-          if (fieldMatch && fieldMatch.index > 0) {
-            const beforeField = structSource.substring(0, fieldMatch.index);
-            const tripleSlashMatches = [
-              ...beforeField.matchAll(/\/\/\/\s*(@custom:property\s+[^\n]*)/g),
-            ];
-            if (tripleSlashMatches.length > 0) {
-              const lastMatch = tripleSlashMatches[tripleSlashMatches.length - 1];
-              property = lastMatch[1].replace("@custom:property", "").trim();
+          
+          // Split by lines and find the line with this field
+          const structLines = structSource.split("\n");
+          for (let i = 0; i < structLines.length; i++) {
+            const structLine = structLines[i];
+            // Check if this line contains the field definition
+            if (structLine.match(new RegExp(`\\b${name}\\b.*[;{]`))) {
+              // Found the field definition, look backwards for documentation
+              for (let j = i - 1; j >= 0; j--) {
+                const docLine = structLines[j].trim();
+                if (docLine.startsWith("///")) {
+                  const match = docLine.match(/@custom:property\s+(.+)$/);
+                  if (match) {
+                    property = match[1].trim();
+                    break;
+                  }
+                } else if (docLine.length > 0 && !docLine.startsWith("struct")) {
+                  // Stop if we hit a non-comment, non-empty line
+                  break;
+                }
+              }
+              break;
             }
           }
         }
@@ -798,40 +823,50 @@ function extractContractTypesFromSource(
     const valuesText = enumMatch[2];
 
     const values: EnumValue[] = [];
-    const valueLines = valuesText
-      .split(",")
-      .map((v) => v.trim())
-      .filter((v) => v);
     
     // Get the enum source for variant documentation extraction
     const enumStart = contractBody.indexOf(`enum ${enumName}`);
     const enumEnd = contractBody.indexOf("}", enumStart) + 1;
     const enumSource = contractBody.substring(enumStart, enumEnd);
     
+    // First, remove all comments from the values text to avoid splitting on commas inside comments
+    let cleanedValues = valuesText.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
+    cleanedValues = cleanedValues.replace(/\/\*[\s\S]*?\*\//g, ""); // Remove /* */ comments
+
+    // Now split by comma
+    const valueLines = cleanedValues
+      .split(",")
+      .map((v) => v.trim())
+      .filter((v) => v);
+    
     for (const line of valueLines) {
       if (line) {
-        // Remove leading comments to get the clean variant name
-        let cleaned = line.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
-        cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
-        const trimmed = cleaned.trim();
-        
-        if (!trimmed) continue;
-        
-        const valueName = trimmed.split(/[\s;]/)[0]; // Get first word (the variant name)
+        const valueName = line.split(/[\s;]/)[0]; // Get first word (the variant name)
         
         // Extract variant documentation from source
         let variant = "";
-        // Look for the variant name with word boundaries to avoid partial matches
-        const variantRegex = new RegExp(`\\b${valueName}\\b`);
-        const variantMatch = variantRegex.exec(enumSource);
-        if (variantMatch && variantMatch.index > 0) {
-          const beforeValue = enumSource.substring(0, variantMatch.index);
-          const tripleSlashMatches = [
-            ...beforeValue.matchAll(/\/\/\/\s*(@custom:variant\s+[^\n]*)/g),
-          ];
-          if (tripleSlashMatches.length > 0) {
-            const lastMatch = tripleSlashMatches[tripleSlashMatches.length - 1];
-            variant = lastMatch[1].replace("@custom:variant", "").trim();
+        
+        // Split enumSource by lines and find the line with just this variant name
+        const enumLines = enumSource.split("\n");
+        for (let i = 0; i < enumLines.length; i++) {
+          const enumLine = enumLines[i].trim();
+          // Check if this line is the variant definition (may have trailing comma)
+          if (enumLine.match(new RegExp(`^${valueName}\\s*,?\\s*$`))) {
+            // Found the variant definition, look backwards for documentation
+            for (let j = i - 1; j >= 0; j--) {
+              const docLine = enumLines[j].trim();
+              if (docLine.startsWith("///")) {
+                const match = docLine.match(/@custom:variant\s+(.+)$/);
+                if (match) {
+                  variant = match[1].trim();
+                  break;
+                }
+              } else if (docLine.length > 0) {
+                // Stop if we hit a non-comment, non-empty line
+                break;
+              }
+            }
+            break;
           }
         }
         
