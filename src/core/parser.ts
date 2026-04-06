@@ -370,7 +370,7 @@ function extractFileTypesFromSource(sourceText: string): {
 
               // Extract documentation for this field from source
               let property = "";
-              
+
               // Split structSource by lines and find the line with this field
               const structLines = structSource.split("\n");
               for (let i = 0; i < structLines.length; i++) {
@@ -386,7 +386,10 @@ function extractFileTypesFromSource(sourceText: string): {
                         property = match[1].trim();
                         break;
                       }
-                    } else if (docLine.length > 0 && !docLine.startsWith("struct")) {
+                    } else if (
+                      docLine.length > 0 &&
+                      !docLine.startsWith("struct")
+                    ) {
                       // Stop if we hit a non-comment, non-empty line
                       break;
                     }
@@ -481,7 +484,7 @@ function extractFileTypesFromSource(sourceText: string): {
             if (valueName && valueName !== enumName) {
               // Extract documentation for this value from source
               let variant = "";
-              
+
               // Split enumSource by lines and find the line with just this variant name
               const enumLines = enumSource.split("\n");
               for (let i = 0; i < enumLines.length; i++) {
@@ -758,7 +761,7 @@ function extractContractTypesFromSource(
       // Remove comments from the line
       let cleaned = line.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
       cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
-      
+
       const trimmed = cleaned.trim();
       if (!trimmed) continue;
 
@@ -767,14 +770,14 @@ function extractContractTypesFromSource(
       if (parts.length >= 2) {
         const name = parts[parts.length - 1];
         const type = parts.slice(0, -1).join(" ");
-        
+
         // Extract property documentation from source
         let property = "";
         const structStart = contractBody.indexOf(`struct ${structName}`);
         if (structStart >= 0) {
           const structEnd = contractBody.indexOf("}", structStart) + 1;
           const structSource = contractBody.substring(structStart, structEnd);
-          
+
           // Split by lines and find the line with this field
           const structLines = structSource.split("\n");
           for (let i = 0; i < structLines.length; i++) {
@@ -790,7 +793,10 @@ function extractContractTypesFromSource(
                     property = match[1].trim();
                     break;
                   }
-                } else if (docLine.length > 0 && !docLine.startsWith("struct")) {
+                } else if (
+                  docLine.length > 0 &&
+                  !docLine.startsWith("struct")
+                ) {
                   // Stop if we hit a non-comment, non-empty line
                   break;
                 }
@@ -799,7 +805,7 @@ function extractContractTypesFromSource(
             }
           }
         }
-        
+
         fields.push({
           name,
           type,
@@ -823,12 +829,12 @@ function extractContractTypesFromSource(
     const valuesText = enumMatch[2];
 
     const values: EnumValue[] = [];
-    
+
     // Get the enum source for variant documentation extraction
     const enumStart = contractBody.indexOf(`enum ${enumName}`);
     const enumEnd = contractBody.indexOf("}", enumStart) + 1;
     const enumSource = contractBody.substring(enumStart, enumEnd);
-    
+
     // First, remove all comments from the values text to avoid splitting on commas inside comments
     let cleanedValues = valuesText.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
     cleanedValues = cleanedValues.replace(/\/\*[\s\S]*?\*\//g, ""); // Remove /* */ comments
@@ -838,14 +844,14 @@ function extractContractTypesFromSource(
       .split(",")
       .map((v) => v.trim())
       .filter((v) => v);
-    
+
     for (const line of valueLines) {
       if (line) {
         const valueName = line.split(/[\s;]/)[0]; // Get first word (the variant name)
-        
+
         // Extract variant documentation from source
         let variant = "";
-        
+
         // Split enumSource by lines and find the line with just this variant name
         const enumLines = enumSource.split("\n");
         for (let i = 0; i < enumLines.length; i++) {
@@ -869,7 +875,7 @@ function extractContractTypesFromSource(
             break;
           }
         }
-        
+
         values.push({
           name: valueName,
           variant,
