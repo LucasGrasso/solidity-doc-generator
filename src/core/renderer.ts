@@ -20,7 +20,7 @@ export interface Renderer {
 // =============================================================================
 
 /**
- * Escape special characters for Markdown
+ * Escape special characters for Markdown (for text outside code blocks)
  */
 function escapeMarkdown(value: string): string {
   return value
@@ -35,6 +35,13 @@ function escapeMarkdown(value: string): string {
     .replaceAll("#", "\\#")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+/**
+ * Escape for code inside backticks (only escape backticks)
+ */
+function escapeCodeContent(value: string): string {
+  return value.replaceAll("`", "\\`");
 }
 
 /**
@@ -246,7 +253,7 @@ export class MarkdownRenderer implements Renderer {
             sections.push(`### Functions`);
             sections.push("");
             for (const fn of functions) {
-              sections.push(`- \`${escapeMarkdown(renderAbiSignature(fn))}\``);
+              sections.push(`- \`${escapeCodeContent(renderAbiSignature(fn))}\``);
             }
             sections.push("");
           }
@@ -255,7 +262,7 @@ export class MarkdownRenderer implements Renderer {
             sections.push(`### Events`);
             sections.push("");
             for (const evt of events) {
-              sections.push(`- \`${escapeMarkdown(renderAbiSignature(evt))}\``);
+              sections.push(`- \`${escapeCodeContent(renderAbiSignature(evt))}\``);
             }
             sections.push("");
           }
@@ -264,7 +271,7 @@ export class MarkdownRenderer implements Renderer {
             sections.push(`### Errors`);
             sections.push("");
             for (const err of errors) {
-              sections.push(`- \`${escapeMarkdown(renderAbiSignature(err))}\``);
+              sections.push(`- \`${escapeCodeContent(renderAbiSignature(err))}\``);
             }
             sections.push("");
           }
@@ -278,7 +285,7 @@ export class MarkdownRenderer implements Renderer {
         for (const fn of doc.astFunctions) {
           // Normalize signature by removing newlines and extra spaces
           const normalizedSig = fn.signature.replace(/\s+/g, " ").trim();
-          sections.push(`- \`${escapeMarkdown(normalizedSig)}\``);
+          sections.push(`- \`${escapeCodeContent(normalizedSig)}\``);
           if (fn.notice) {
             sections.push(`  - ${fn.notice}`);
           }
@@ -305,7 +312,7 @@ export class MarkdownRenderer implements Renderer {
                 ? escapeMarkdown(field.property)
                 : "-";
               sections.push(
-                `| \`${escapeMarkdown(field.name)}\` | \`${escapeMarkdown(field.type)}\` | ${desc} |`,
+                `| \`${escapeCodeContent(field.name)}\` | \`${escapeCodeContent(field.type)}\` | ${desc} |`,
               );
             }
           }
@@ -329,7 +336,7 @@ export class MarkdownRenderer implements Renderer {
             sections.push("|---------|-------------|");
             for (const val of enumDoc.values) {
               const desc = val.variant ? escapeMarkdown(val.variant) : "-";
-              sections.push(`| \`${escapeMarkdown(val.name)}\` | ${desc} |`);
+              sections.push(`| \`${escapeCodeContent(val.name)}\` | ${desc} |`);
             }
           }
           sections.push("");
@@ -341,7 +348,7 @@ export class MarkdownRenderer implements Renderer {
         sections.push(`${titleLevel}# Top-Level Functions`);
         sections.push("");
         for (const fn of doc.sourceFreeFunctions) {
-          sections.push(`- \`${escapeMarkdown(fn.signature)}\``);
+          sections.push(`- \`${escapeCodeContent(fn.signature)}\``);
           if (fn.notice) {
             sections.push(`  - ${fn.notice}`);
           }
