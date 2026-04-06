@@ -11,8 +11,6 @@ import "{{sourcePath}}";
 {{#each contracts}}
 - <a href="#{{slugify this.doc.contractName}}"><code>{{this.doc.contractName}}</code></a> ({{this.doc.contractKind}})
 {{/each}}
-
-
 {{#if sourceFreeFunctions.length}}
 
 ## File-Level Functions
@@ -36,9 +34,7 @@ import "{{sourcePath}}";
 {{/if}}
 
 {{/each}}
-
 {{/if}}
-
 {{#if sourceStructs.length}}
 
 ## File-Level Structs
@@ -73,9 +69,7 @@ struct {{this.name}}
 {{/if}}
 
 {{/each}}
-
 {{/if}}
-
 {{#if sourceEnums.length}}
 
 ## File-Level Enums
@@ -110,8 +104,8 @@ enum {{this.name}}
 {{/if}}
 
 {{/each}}
-
 {{/if}}
+{{#if sourceFreeFunctions.length}}{{#if sourceStructs.length}}{{#if sourceEnums.length}}{{else}}{{/if}}{{/if}}{{/if}}
 
 {{#each contracts}}
 
