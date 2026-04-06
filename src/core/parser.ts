@@ -740,7 +740,11 @@ function extractContractTypesFromSource(
     const fields: StructField[] = [];
     const fieldLines = fieldsText.split(";").filter((line) => line.trim());
     for (const line of fieldLines) {
-      const trimmed = line.trim();
+      // Remove comments from the line
+      let cleaned = line.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
+      cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
+      
+      const trimmed = cleaned.trim();
       if (!trimmed) continue;
 
       // Parse "type name" format
@@ -752,17 +756,21 @@ function extractContractTypesFromSource(
         // Extract property documentation from source
         let property = "";
         const structStart = contractBody.indexOf(`struct ${structName}`);
-        const structEnd = contractBody.indexOf("}", structStart) + 1;
-        const structSource = contractBody.substring(structStart, structEnd);
-        const fieldIndex = structSource.indexOf(name);
-        if (fieldIndex > 0) {
-          const beforeField = structSource.substring(0, fieldIndex);
-          const tripleSlashMatches = [
-            ...beforeField.matchAll(/\/\/\/\s*(@custom:property\s+[^\n]*)/g),
-          ];
-          if (tripleSlashMatches.length > 0) {
-            const lastMatch = tripleSlashMatches[tripleSlashMatches.length - 1];
-            property = lastMatch[1].replace("@custom:property", "").trim();
+        if (structStart >= 0) {
+          const structEnd = contractBody.indexOf("}", structStart) + 1;
+          const structSource = contractBody.substring(structStart, structEnd);
+          // Look for the field name with word boundaries to avoid partial matches
+          const fieldRegex = new RegExp(`\\b${name}\\b`);
+          const fieldMatch = fieldRegex.exec(structSource);
+          if (fieldMatch && fieldMatch.index > 0) {
+            const beforeField = structSource.substring(0, fieldMatch.index);
+            const tripleSlashMatches = [
+              ...beforeField.matchAll(/\/\/\/\s*(@custom:property\s+[^\n]*)/g),
+            ];
+            if (tripleSlashMatches.length > 0) {
+              const lastMatch = tripleSlashMatches[tripleSlashMatches.length - 1];
+              property = lastMatch[1].replace("@custom:property", "").trim();
+            }
           }
         }
         
@@ -801,13 +809,22 @@ function extractContractTypesFromSource(
     
     for (const line of valueLines) {
       if (line) {
-        const valueName = line.split(/[\s;]/)[0]; // Get first word (the variant name)
+        // Remove leading comments to get the clean variant name
+        let cleaned = line.replace(/^\s*\/\/\/.*$/gm, ""); // Remove /// comments
+        cleaned = cleaned.replace(/^\s*\/\*[\s\S]*?\*\/\s*/gm, ""); // Remove /* */ comments
+        const trimmed = cleaned.trim();
+        
+        if (!trimmed) continue;
+        
+        const valueName = trimmed.split(/[\s;]/)[0]; // Get first word (the variant name)
         
         // Extract variant documentation from source
         let variant = "";
-        const valueIndex = enumSource.indexOf(valueName);
-        if (valueIndex > 0) {
-          const beforeValue = enumSource.substring(0, valueIndex);
+        // Look for the variant name with word boundaries to avoid partial matches
+        const variantRegex = new RegExp(`\\b${valueName}\\b`);
+        const variantMatch = variantRegex.exec(enumSource);
+        if (variantMatch && variantMatch.index > 0) {
+          const beforeValue = enumSource.substring(0, variantMatch.index);
           const tripleSlashMatches = [
             ...beforeValue.matchAll(/\/\/\/\s*(@custom:variant\s+[^\n]*)/g),
           ];
