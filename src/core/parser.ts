@@ -748,10 +748,28 @@ function extractContractTypesFromSource(
       if (parts.length >= 2) {
         const name = parts[parts.length - 1];
         const type = parts.slice(0, -1).join(" ");
+        
+        // Extract property documentation from source
+        let property = "";
+        const structStart = contractBody.indexOf(`struct ${structName}`);
+        const structEnd = contractBody.indexOf("}", structStart) + 1;
+        const structSource = contractBody.substring(structStart, structEnd);
+        const fieldIndex = structSource.indexOf(name);
+        if (fieldIndex > 0) {
+          const beforeField = structSource.substring(0, fieldIndex);
+          const tripleSlashMatches = [
+            ...beforeField.matchAll(/\/\/\/\s*(@custom:property\s+[^\n]*)/g),
+          ];
+          if (tripleSlashMatches.length > 0) {
+            const lastMatch = tripleSlashMatches[tripleSlashMatches.length - 1];
+            property = lastMatch[1].replace("@custom:property", "").trim();
+          }
+        }
+        
         fields.push({
           name,
           type,
-          property: "",
+          property,
         });
       }
     }
@@ -775,11 +793,33 @@ function extractContractTypesFromSource(
       .split(",")
       .map((v) => v.trim())
       .filter((v) => v);
+    
+    // Get the enum source for variant documentation extraction
+    const enumStart = contractBody.indexOf(`enum ${enumName}`);
+    const enumEnd = contractBody.indexOf("}", enumStart) + 1;
+    const enumSource = contractBody.substring(enumStart, enumEnd);
+    
     for (const line of valueLines) {
       if (line) {
+        const valueName = line.split(/[\s;]/)[0]; // Get first word (the variant name)
+        
+        // Extract variant documentation from source
+        let variant = "";
+        const valueIndex = enumSource.indexOf(valueName);
+        if (valueIndex > 0) {
+          const beforeValue = enumSource.substring(0, valueIndex);
+          const tripleSlashMatches = [
+            ...beforeValue.matchAll(/\/\/\/\s*(@custom:variant\s+[^\n]*)/g),
+          ];
+          if (tripleSlashMatches.length > 0) {
+            const lastMatch = tripleSlashMatches[tripleSlashMatches.length - 1];
+            variant = lastMatch[1].replace("@custom:variant", "").trim();
+          }
+        }
+        
         values.push({
-          name: line,
-          variant: "",
+          name: valueName,
+          variant,
         });
       }
     }
