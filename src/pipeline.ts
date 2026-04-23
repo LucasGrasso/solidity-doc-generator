@@ -218,12 +218,22 @@ async function renderMarkdownFromTemplate(
 
   // Register custom helper to check if contracts are barrel
   Handlebars.registerHelper("isBarrel", (contracts: any[]) => {
-    return contracts && contracts.length > 0 && contracts[0].doc && contracts[0].doc.contractKind === 'barrel';
+    return (
+      contracts &&
+      contracts.length > 0 &&
+      contracts[0].doc &&
+      contracts[0].doc.contractKind === "barrel"
+    );
   });
 
   // Register custom helper to get barrel imports
   Handlebars.registerHelper("getBarrelImports", (contracts: any[]) => {
-    if (contracts && contracts.length > 0 && contracts[0].doc && contracts[0].doc.barrelImports) {
+    if (
+      contracts &&
+      contracts.length > 0 &&
+      contracts[0].doc &&
+      contracts[0].doc.barrelImports
+    ) {
       return contracts[0].doc.barrelImports;
     }
     return [];
