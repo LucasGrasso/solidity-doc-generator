@@ -22,6 +22,41 @@ import type {
 } from "./types.js";
 
 // =============================================================================
+// Barrel File Detection & Import Extraction
+// =============================================================================
+
+/**
+ * Check if a source file is a "barrel" file (only imports, no contract definitions)
+ */
+export function isBarrelFile(sourceText: string, ast: AstNode | undefined): boolean {
+  // Check AST: if no contracts/interfaces/libraries defined, it's a barrel
+  const contractNodes = ast?.nodes ?? [];
+  const hasContracts = contractNodes.some(
+    (node) =>
+      node.nodeType === "ContractDefinition" ||
+      node.nodeType === "InterfaceDefinition" ||
+      node.nodeType === "LibraryDefinition",
+  );
+  return !hasContracts;
+}
+
+/**
+ * Extract import paths from a barrel file
+ */
+export function extractImportsFromSource(sourceText: string): string[] {
+  const imports: string[] = [];
+  const importRegex = /import\s+["']([^"']+)["']/g;
+  let match;
+
+  while ((match = importRegex.exec(sourceText)) !== null) {
+    const importPath = match[1];
+    imports.push(importPath);
+  }
+
+  return imports;
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 
@@ -50,9 +85,21 @@ export function getNoticeFromDocText(
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  const noticeLine = lines.find((line) => line.startsWith("@notice"));
-  if (noticeLine) {
-    return noticeLine.replace(/^@notice\s*/, "").trim();
+  const noticeIndex = lines.findIndex((line) => line.startsWith("@notice"));
+  if (noticeIndex !== -1) {
+    const chunks: string[] = [];
+    // Extract text after @notice on first line
+    chunks.push(lines[noticeIndex].replace(/^@notice\s*/, "").trim());
+    
+    // Capture continuation lines (until next @tag)
+    for (let i = noticeIndex + 1; i < lines.length; i++) {
+      if (lines[i].startsWith("@")) {
+        break;
+      }
+      chunks.push(lines[i]);
+    }
+    
+    return chunks.join(" ").trim();
   }
 
   return lines[0].replace(/^@\w+\s*/, "").trim();
@@ -992,6 +1039,7 @@ export function readBuildInfoContracts(
 
   const docs: ContractDoc[] = [];
   const sourceDetailsByPath = new Map<string, SourceLevelDetails>();
+  const allSourcesByFile = new Map<string, AstNode | undefined>();
 
   for (const fileName of files) {
     const fullPath = join(buildInfoDir, fileName);
@@ -999,6 +1047,14 @@ export function readBuildInfoContracts(
     const buildInfo = JSON.parse(raw) as BuildInfo;
     const contractsByFile = buildInfo.output?.contracts ?? {};
     const sourcesByFile = buildInfo.output?.sources ?? {};
+
+    // Store all sources for barrel detection later
+    for (const [sourcePath, sourceData] of Object.entries(sourcesByFile)) {
+      const normalizedSourcePath = sourcePath.replace(/^project\//, "");
+      if (!allSourcesByFile.has(normalizedSourcePath)) {
+        allSourcesByFile.set(normalizedSourcePath, sourceData.ast);
+      }
+    }
 
     // First pass: extract source-level details (structs, enums, free functions)
     for (const [sourcePath, sourceData] of Object.entries(sourcesByFile)) {
@@ -1083,6 +1139,15 @@ export function readBuildInfoContracts(
     byKey.set(`${doc.sourcePath}:${doc.contractName}`, doc);
   }
 
+  // Create a map of source files to contracts for barrel file resolution
+  const contractsBySourcePath = new Map<string, ContractDoc[]>();
+  for (const doc of Array.from(byKey.values())) {
+    if (!contractsBySourcePath.has(doc.sourcePath)) {
+      contractsBySourcePath.set(doc.sourcePath, []);
+    }
+    contractsBySourcePath.get(doc.sourcePath)!.push(doc);
+  }
+
   // Add source-level docs for files that define structs/enums/free functions
   // but do not emit any contract artifacts.
   for (const [sourcePath, sourceDetails] of sourceDetailsByPath.entries()) {
@@ -1124,6 +1189,87 @@ export function readBuildInfoContracts(
       details: "",
       license,
     });
+  }
+
+  // Detect barrel files (source files with no contracts and only imports)
+  // and create entries that group imported contracts
+  for (const [sourcePath, sourceAst] of allSourcesByFile.entries()) {
+    if (!sourcePath.startsWith("contracts/")) {
+      continue;
+    }
+
+    if (!existsSync(join(rootDir, sourcePath))) {
+      continue;
+    }
+
+    // Skip if already represented (has contracts or source-level types)
+    if (byKey.has(`${sourcePath}:*`) || 
+        Array.from(byKey.values()).some((doc) => doc.sourcePath === sourcePath)) {
+      continue;
+    }
+
+    // Check if this file is a barrel (AST exists but no contracts)
+    const sourceText = readFileSync(join(rootDir, sourcePath), "utf8");
+
+    if (isBarrelFile(sourceText, sourceAst)) {
+      // Extract imports from barrel file
+      const imports = extractImportsFromSource(sourceText);
+      
+      if (imports.length > 0) {
+        // Resolve imports to contracts
+        const barrelImports: Array<{ path: string; contracts: ContractDoc[] }> = [];
+        const importedPaths = new Set<string>();
+
+        for (const importPath of imports) {
+          // Normalize import paths like "./AB.sol" or "./AB" to "contracts/AB.sol"
+          let resolvedPath = importPath;
+          
+          // If it's a relative path, resolve it relative to the barrel file's directory
+          if (resolvedPath.startsWith("./") || resolvedPath.startsWith("../")) {
+            const barrelDir = sourcePath.substring(0, sourcePath.lastIndexOf("/"));
+            resolvedPath = join(barrelDir, resolvedPath).replace(/\\/g, "/");
+          }
+
+          // Add .sol if not present
+          if (!resolvedPath.endsWith(".sol")) {
+            resolvedPath += ".sol";
+          }
+
+          // Get contracts from this import
+          const importedContracts = contractsBySourcePath.get(resolvedPath) || [];
+          
+          if (importedContracts.length > 0 && !importedPaths.has(resolvedPath)) {
+            barrelImports.push({
+              path: resolvedPath,
+              contracts: importedContracts,
+            });
+            importedPaths.add(resolvedPath);
+          }
+        }
+
+        // Create a barrel entry if we found imported contracts
+        if (barrelImports.length > 0) {
+          const license = extractLicenseFromSource(sourceText);
+          const barrelTitle = basename(sourcePath, ".sol");
+          byKey.set(`${sourcePath}:${barrelTitle}`, {
+            sourcePath,
+            contractName: barrelTitle,
+            contractKind: "barrel",
+            abi: [],
+            astFunctions: [],
+            astStructs: [],
+            astEnums: [],
+            sourceStructs: [],
+            sourceEnums: [],
+            sourceFreeFunctions: [],
+            notice: `Re-exports from ${imports.map((p) => basename(p, ".sol")).join(", ")}`,
+            details: "",
+            license,
+            barrelImports,
+          });
+        }
+      }
+    }
   }
 
   return Array.from(byKey.values()).sort((a, b) => {

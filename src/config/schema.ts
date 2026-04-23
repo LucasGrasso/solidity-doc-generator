@@ -212,6 +212,7 @@ export function normalizeConfig(
       "interface",
       "library",
       "source",
+      "barrel",
     ],
     formatTags: config.formatTags ?? [],
     sourceDir: config.sourceDir ?? "contracts",

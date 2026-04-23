@@ -114,6 +114,7 @@ export type ContractDoc = {
   details: string;
   license?: string;
   formatTag?: string;
+  barrelImports?: Array<{ path: string; contracts: ContractDoc[] }>;
 };
 
 // =============================================================================

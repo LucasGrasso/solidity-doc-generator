@@ -211,6 +211,24 @@ async function renderMarkdownFromTemplate(
 ): Promise<RenderedFile[]> {
   const templateContent = readFileSync(templatePath, "utf8");
 
+  // Register custom helper to compare values
+  Handlebars.registerHelper("eq", (a: any, b: any) => {
+    return a === b;
+  });
+
+  // Register custom helper to check if contracts are barrel
+  Handlebars.registerHelper("isBarrel", (contracts: any[]) => {
+    return contracts && contracts.length > 0 && contracts[0].doc && contracts[0].doc.contractKind === 'barrel';
+  });
+
+  // Register custom helper to get barrel imports
+  Handlebars.registerHelper("getBarrelImports", (contracts: any[]) => {
+    if (contracts && contracts.length > 0 && contracts[0].doc && contracts[0].doc.barrelImports) {
+      return contracts[0].doc.barrelImports;
+    }
+    return [];
+  });
+
   // Register custom helper to extract function name and parameters from signature
   Handlebars.registerHelper("functionName", (signature: string) => {
     if (!signature) return "";
