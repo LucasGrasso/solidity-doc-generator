@@ -1194,7 +1194,7 @@ export function readBuildInfoContracts(
   // Detect barrel files (source files with no contracts and only imports)
   // and create entries that group imported contracts
   for (const [sourcePath, sourceAst] of allSourcesByFile.entries()) {
-    if (!sourcePath.startsWith("contracts/")) {
+    if (!sourcePath.startsWith(sourceDir + "/")) {
       continue;
     }
 
